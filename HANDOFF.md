@@ -1,6 +1,6 @@
 # HANDOFF
 
-Updated 2026-11-05 (cloud session, branch `overseer/phase-1-2`).
+Updated 2026-11-05, later (cloud session, branch `overseer/phase-1-2`).
 
 ## Where things stand
 
@@ -12,6 +12,10 @@ Updated 2026-11-05 (cloud session, branch `overseer/phase-1-2`).
   page, which only run as the viewer on claude.ai.
 - The store holds this session's own report at `projects/overseer` and `sessions/<id>`, written
   with ArtifactData per `docs/PROTOCOL.md`, and this session carries the tag `project:overseer`.
+
+- Red team done: two reviews, 20 findings, 15 fixed, see `docs/REDTEAM-2026-11-05.md`. Page is
+  artifact version 3, commit 3b365f5. `tools/redteam.js` (adversarial inputs) and `tools/shot.js`
+  (render with stub data) rerun the checks; both green.
 
 ## Republishing the page
 
