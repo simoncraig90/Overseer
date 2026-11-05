@@ -6,7 +6,12 @@ Updated 2026-11-05 (cloud session, branch `overseer/phase-1-2`).
 
 - Phase 0 is live: https://claude.ai/artifact/AQEzPc9KAg8UewgEDPL4RQ reads sessions, repos and
   scheduled tasks through the Claude Code Remote connector. Source: `page/overseer.html`.
-- Phase 1 (GitHub layer) and Phase 2 (database, handoff protocol, notes) are in progress on this branch.
+- Phase 1 (GitHub layer) and Phase 2 (store, handoff protocol, notes) are published (artifact version 2)
+  from this branch, commit fea99c9. Verified locally with a stubbed runtime (screenshots, no script
+  errors, notes editor writes the right document). Not verified: the real connector calls from the
+  page, which only run as the viewer on claude.ai.
+- The store holds this session's own report at `projects/overseer` and `sessions/<id>`, written
+  with ArtifactData per `docs/PROTOCOL.md`, and this session carries the tag `project:overseer`.
 
 ## Republishing the page
 
@@ -30,6 +35,9 @@ Current declaration:
   branch from it, because rewriting the only commit buys nothing.
 
 ## Not done
+
+- The GitHub tool arguments and fields the page uses come from one real probe in this session
+  (`docs/PHASE1-GITHUB-PROBE.md`), not from the page itself.
 
 - Phase 3 (buttons that message a session, nightly roll-up task) and Phase 4 (history strip).
 - The handoff skill is not installed on any machine yet. See `docs/GLOBAL-CLAUDE-MD-SNIPPET.md`.
