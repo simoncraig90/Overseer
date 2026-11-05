@@ -1,0 +1,538 @@
+<title>Overseer</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  /* Layout: a control desk. Inbox first, then project lanes, then the full roster. One column on phones. */
+  :root {
+    --bg: #eef1f3;
+    --surface: #ffffff;
+    --surface-2: #f6f8f9;
+    --fg: #16202a;
+    --muted: #5b6977;
+    --line: #d5dbe0;
+    --accent: #1f6f8b;
+    --accent-ink: #ffffff;
+    --critical: #b42318;
+    --critical-bg: #fde8e6;
+    --warn: #b54708;
+    --warn-bg: #fdefd9;
+    --ok: #067647;
+    --ok-bg: #dcf5e7;
+    --info: #1f6f8b;
+    --info-bg: #dfeef4;
+    --neutral-bg: #e8ecef;
+    --display: "IBM Plex Sans Condensed", "Helvetica Neue", Arial, sans-serif;
+    --body: "IBM Plex Sans", "Helvetica Neue", Arial, sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0f1519; --surface: #171f25; --surface-2: #1d262d; --fg: #e6ebee; --muted: #93a1ab; --line: #2a353d;
+      --accent: #5fb3cf; --accent-ink: #0b1216;
+      --critical: #f97066; --critical-bg: #3a1a17; --warn: #fdb022; --warn-bg: #3a2a10; --ok: #47cd89; --ok-bg: #11301f;
+      --info: #5fb3cf; --info-bg: #15303a; --neutral-bg: #232d34;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0f1519; --surface: #171f25; --surface-2: #1d262d; --fg: #e6ebee; --muted: #93a1ab; --line: #2a353d;
+    --accent: #5fb3cf; --accent-ink: #0b1216;
+    --critical: #f97066; --critical-bg: #3a1a17; --warn: #fdb022; --warn-bg: #3a2a10; --ok: #47cd89; --ok-bg: #11301f;
+    --info: #5fb3cf; --info-bg: #15303a; --neutral-bg: #232d34;
+    color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg); font-family: var(--body); font-size: 14px; line-height: 1.45;
+    padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+    padding-block: 20px 48px;
+  }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover, a:focus-visible { text-decoration: underline; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  button { font: inherit; color: inherit; }
+  .wrap { max-width: 1180px; margin: 0 auto; display: grid; gap: 28px; }
+  .wrap > * { min-width: 0; }
+
+  /* Header */
+  header { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px 24px; }
+  h1 { font-family: var(--display); font-weight: 600; font-size: 28px; letter-spacing: 0.01em; margin: 0; line-height: 1.1; }
+  .sub { color: var(--muted); margin: 4px 0 0; font-size: 13px; }
+  .meta { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); }
+  .btn { border: 1px solid var(--line); background: var(--surface); border-radius: 6px; padding: 6px 12px; cursor: pointer; font-size: 13px; }
+  .btn:hover { border-color: var(--accent); }
+  .btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  .btn[disabled] { opacity: .6; cursor: default; }
+
+  /* Count strip */
+  .counts { display: flex; flex-wrap: wrap; gap: 8px; }
+  .count { display: inline-flex; align-items: baseline; gap: 6px; padding: 6px 10px; border-radius: 6px; background: var(--surface); border: 1px solid var(--line); font-size: 13px; }
+  .count b { font-family: var(--mono); font-weight: 500; font-size: 16px; font-variant-numeric: tabular-nums; }
+  .count.critical b { color: var(--critical); }
+  .count.warn b { color: var(--warn); }
+  .count.info b { color: var(--info); }
+
+  /* Sections */
+  section > h2 { font-family: var(--display); font-weight: 600; font-size: 17px; margin: 0 0 10px; display: flex; align-items: baseline; gap: 10px; }
+  section > h2 .n { font-family: var(--mono); font-weight: 400; font-size: 13px; color: var(--muted); }
+  .hint { color: var(--muted); font-size: 13px; margin: 0 0 10px; max-width: 70ch; }
+
+  /* Inbox cards */
+  .inbox { display: grid; gap: 10px; }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px 12px 16px; position: relative; display: grid; gap: 6px; min-width: 0; }
+  .card::before { content: ""; position: absolute; left: 0; top: 10px; bottom: 10px; width: 3px; border-radius: 2px; background: var(--muted); }
+  .card.critical::before { background: var(--critical); }
+  .card.warn::before { background: var(--warn); }
+  .card.info::before { background: var(--info); }
+  .card .row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; min-width: 0; }
+  .card .title { font-weight: 600; font-size: 15px; }
+  .card .ask { font-size: 14px; }
+  .card .ask strong { font-weight: 600; color: var(--critical); }
+  .card .did { color: var(--muted); font-size: 13px; }
+  .card .foot { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 12px; color: var(--muted); font-family: var(--mono); }
+
+  /* Chips */
+  .chip { display: inline-flex; align-items: center; gap: 5px; border-radius: 999px; padding: 1px 8px; font-size: 12px; line-height: 18px; white-space: nowrap; background: var(--neutral-bg); color: var(--fg); }
+  .chip::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; opacity: .9; }
+  .chip.critical { background: var(--critical-bg); color: var(--critical); }
+  .chip.warn { background: var(--warn-bg); color: var(--warn); }
+  .chip.ok { background: var(--ok-bg); color: var(--ok); }
+  .chip.info { background: var(--info-bg); color: var(--info); }
+  .chip.plain::before { display: none; }
+  .chip.proj { background: transparent; border: 1px solid var(--line); color: var(--muted); }
+  .chip.proj::before { display: none; }
+  .dot-unread { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); vertical-align: middle; }
+
+  /* Projects */
+  .lanes { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 10px; }
+  .lane { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; display: grid; gap: 8px; min-width: 0; align-content: start; }
+  .lane h3 { margin: 0; font-size: 15px; font-weight: 600; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 6px 10px; }
+  .lane h3 small { font-family: var(--mono); font-weight: 400; font-size: 12px; color: var(--muted); }
+  .lane .latest { font-size: 13px; color: var(--muted); }
+  .lane .latest b { color: var(--fg); font-weight: 500; }
+  .lane ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; font-size: 13px; }
+  .lane li { display: flex; align-items: center; gap: 8px; min-width: 0; }
+  .lane li .t { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .lane li .age { font-family: var(--mono); font-size: 12px; color: var(--muted); }
+  .lane .repo { font-size: 12px; color: var(--muted); font-family: var(--mono); display: flex; flex-wrap: wrap; gap: 4px 10px; }
+
+  /* Filters + table */
+  .filters { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 10px; }
+  .filters input[type="search"] { border: 1px solid var(--line); background: var(--surface); border-radius: 6px; padding: 6px 10px; font: inherit; min-width: 200px; flex: 1 1 200px; }
+  .filters label { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); cursor: pointer; }
+  .toggle { border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 3px 10px; font-size: 12px; cursor: pointer; color: var(--muted); }
+  .toggle[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  .tablewrap { overflow-x: auto; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; }
+  table { border-collapse: collapse; width: 100%; min-width: 760px; font-size: 13px; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); font-weight: 600; background: var(--surface-2); position: sticky; top: 0; }
+  tr:last-child td { border-bottom: 0; }
+  td.t { font-weight: 500; white-space: nowrap; }
+  td.age { font-family: var(--mono); font-size: 12px; color: var(--muted); white-space: nowrap; font-variant-numeric: tabular-nums; }
+  td.sum { color: var(--muted); max-width: 46ch; }
+  td.sum .need { color: var(--fg); }
+
+  /* Tasks */
+  .tasks { display: grid; gap: 8px; }
+  .task { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 10px 14px; display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; font-size: 13px; }
+  .task code { font-family: var(--mono); font-size: 12px; background: var(--surface-2); padding: 1px 6px; border-radius: 4px; }
+
+  /* States */
+  .empty { border: 1px dashed var(--line); border-radius: 8px; padding: 18px 16px; color: var(--muted); font-size: 13px; background: transparent; }
+  .empty b { color: var(--fg); font-weight: 600; }
+  .notice { border-radius: 8px; padding: 12px 14px; font-size: 13px; display: grid; gap: 6px; border: 1px solid var(--line); background: var(--surface); }
+  .notice.critical { border-color: var(--critical); }
+  .notice.warn { border-color: var(--warn); }
+  .notice .code { font-family: var(--mono); font-size: 12px; color: var(--muted); }
+  .skeleton { height: 14px; border-radius: 4px; background: linear-gradient(90deg, var(--neutral-bg), var(--surface-2), var(--neutral-bg)); background-size: 200% 100%; animation: sh 1.2s linear infinite; }
+  @keyframes sh { from { background-position: 200% 0 } to { background-position: -200% 0 } }
+  @media (prefers-reduced-motion: reduce) { .skeleton { animation: none; } }
+
+  footer { color: var(--muted); font-size: 12px; max-width: 80ch; display: grid; gap: 4px; }
+  footer code { font-family: var(--mono); }
+  @media (max-width: 520px) {
+    h1 { font-size: 24px; }
+    .card { padding-left: 14px; }
+  }
+</style>
+
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Overseer</h1>
+      <p class="sub">Every Claude Code session and project, in one place. What needs you comes first.</p>
+    </div>
+    <div class="meta">
+      <span id="freshness">Connecting to Claude Code Remote…</span>
+      <button class="btn" id="refresh" type="button">Refresh</button>
+    </div>
+  </header>
+
+  <div class="counts" id="counts" aria-live="polite"></div>
+
+  <div id="page-notice" hidden></div>
+
+  <section id="sec-inbox">
+    <h2>Needs you <span class="n" id="inbox-n"></span></h2>
+    <p class="hint">Sessions that are blocked, waiting on a decision, or have work ready for review. Newest first within each severity.</p>
+    <div class="inbox" id="inbox"></div>
+  </section>
+
+  <section id="sec-projects">
+    <h2>Projects <span class="n" id="projects-n"></span></h2>
+    <p class="hint">Grouped by session title with trailing numbers removed, matched to your GitHub repos where the names line up. Proper tagging comes with the handoff protocol.</p>
+    <div class="lanes" id="lanes"></div>
+  </section>
+
+  <section id="sec-sessions">
+    <h2>All sessions <span class="n" id="sessions-n"></span></h2>
+    <div class="filters">
+      <input type="search" id="q" placeholder="Filter by title, project or summary" aria-label="Filter sessions">
+      <button class="toggle" type="button" data-f="working" aria-pressed="false">working</button>
+      <button class="toggle" type="button" data-f="blocked" aria-pressed="false">blocked</button>
+      <button class="toggle" type="button" data-f="review" aria-pressed="false">review ready</button>
+      <button class="toggle" type="button" data-f="done" aria-pressed="false">done</button>
+      <label><input type="checkbox" id="show-archived"> show archived</label>
+    </div>
+    <div class="tablewrap">
+      <table id="sessions">
+        <thead><tr><th>Session</th><th>Project</th><th>Status</th><th>Where</th><th>Updated</th><th>Last summary</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="sec-tasks">
+    <h2>Scheduled tasks <span class="n" id="tasks-n"></span></h2>
+    <div class="tasks" id="tasks"></div>
+  </section>
+
+  <footer>
+    <div>Phase 0. Data comes live from your Claude Code Remote connector, read as you, refreshed about every minute while the page is open. Nothing is stored.</div>
+    <div>Next: GitHub layer per repo (open PRs, unmerged <code>claude/*</code> branches), the session handoff protocol, your own notes and priorities, and buttons that message a session.</div>
+  </footer>
+</div>
+
+<script>
+(() => {
+  "use strict";
+  const SERVER = "Claude Code Remote";
+  const SESSION_URL = id => "https://claude.ai/code/" + encodeURIComponent(id);
+
+  // Title key -> repo name, for the few titles that do not share the repo's name.
+  // Everything else matches by substring against the repo list.
+  const ALIASES = {
+    "soulstone": "soulstone-lab", "soulstone survivors remake": "soulstone-lab",
+    "strangerhood": "StrangerBot", "strangerhood red team": "StrangerBot", "strangerhood android": "Strangerhood-android",
+    "strangerhood security and test review": "StrangerBot", "strangerhood android app": "Strangerhood-android",
+    "soma": "Soma", "edge/hl": "edge-lab", "hands-free claude voice tool": "gandalf",
+    "wrackline": "wrackline-capture-ios", "seo": "SEO", "fix generator for answer-intel": "SEO",
+  };
+
+  const state = {
+    mcp: null, sessions: [], repos: [], triggers: [],
+    at: { sessions: null, repos: null, triggers: null },
+    err: { sessions: null, repos: null, triggers: null },
+    loaded: { sessions: false, repos: false, triggers: false },
+    q: "", f: new Set(), archived: false,
+  };
+  try { state.archived = localStorage.getItem("overseer.archived") === "1"; } catch (e) {}
+
+  // ---------- helpers ----------
+  const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  const $ = sel => document.querySelector(sel);
+  function unwrap(p) {
+    if (typeof p === "string") { try { p = JSON.parse(p); } catch (e) { return {}; } }
+    if (p && typeof p === "object" && p.ccr && typeof p.ccr === "object") p = p.ccr;
+    return p && typeof p === "object" ? p : {};
+  }
+  function ago(iso, now) {
+    const t = Date.parse(iso); if (!t) return "";
+    let s = Math.max(0, Math.round(((now || Date.now()) - t) / 1000));
+    if (s < 60) return "just now";
+    const m = Math.round(s / 60); if (m < 60) return m + "m ago";
+    const h = Math.round(m / 60); if (h < 48) return h + "h ago";
+    const d = Math.round(h / 24); if (d < 14) return d + "d ago";
+    const w = Math.round(d / 7); if (w < 9) return w + "w ago";
+    return Math.round(d / 30) + "mo ago";
+  }
+  function bucket(s) {
+    const b = String(s.status_bucket || "").replace("SESSION_STATUS_BUCKET_", "");
+    const st = String(s.session_status || "").replace("SESSION_STATUS_", "");
+    if (st === "ARCHIVED") return "archived";
+    if (b === "WORKING") return st === "PENDING" ? "pending" : "working";
+    if (b === "BLOCKED") return "blocked";
+    if (b === "REVIEW_READY") return "review";
+    if (b === "FAILED") return "failed";
+    if (b === "COMPLETED") return "done";
+    return st ? st.toLowerCase() : "unknown";
+  }
+  const BUCKET_LABEL = { working: "working", pending: "pending", blocked: "blocked", review: "review ready", failed: "failed", done: "done", archived: "archived", unknown: "unknown" };
+  const BUCKET_TONE = { working: "info", pending: "info", blocked: "critical", review: "warn", failed: "critical", done: "ok", archived: "", unknown: "" };
+  function where(s) {
+    const k = s.environment_kind || "";
+    if (k === "anthropic_cloud") return "Cloud";
+    if (k === "bridge") return "Local";
+    return k || "";
+  }
+  function projectKey(s) {
+    const t = String(s.title || "").trim();
+    let k = t.toLowerCase().replace(/\s*\d+$/, "").trim();
+    if (!k || k === "cloud" || k === "cloud session" || k === "untitled") k = "unsorted";
+    if (ALIASES[k]) return ALIASES[k].toLowerCase();
+    // substring match against repos, longest repo name wins
+    let best = null;
+    for (const r of state.repos) {
+      const name = String(r.full_name || "").split("/").pop().toLowerCase();
+      if (!name) continue;
+      if (k === name || k.includes(name) || (name.length > 3 && name.includes(k))) {
+        if (!best || name.length > best.length) best = name;
+      }
+    }
+    return best || k;
+  }
+  function repoFor(key) {
+    return state.repos.find(r => String(r.full_name || "").split("/").pop().toLowerCase() === key) || null;
+  }
+  function prettyProject(key) {
+    const r = repoFor(key); if (r) return String(r.full_name).split("/").pop();
+    if (key === "unsorted") return "Unsorted";
+    const s = state.sessions.find(x => projectKey(x) === key);
+    const t = s ? String(s.title || "").replace(/\s*\d+$/, "").trim() : "";
+    return t || key;
+  }
+  function severity(s) {
+    const b = bucket(s);
+    const need = s.post_turn_summary && s.post_turn_summary.needs_action;
+    if (b === "archived") return null;
+    if (b === "blocked" || b === "failed") return "critical";
+    if (need) return "critical";
+    if (b === "review") return "warn";
+    return null;
+  }
+
+  // ---------- rendering ----------
+  function render() {
+    const now = Date.now();
+    const live = state.sessions.filter(s => bucket(s) !== "archived");
+    const inbox = live.map(s => ({ s, sev: severity(s) })).filter(x => x.sev)
+      .sort((a, b) => (a.sev === b.sev ? 0 : a.sev === "critical" ? -1 : 1) || (Date.parse(b.s.updated_at) || 0) - (Date.parse(a.s.updated_at) || 0));
+
+    // counts
+    const n = k => live.filter(s => bucket(s) === k).length;
+    const projKeys = new Set(live.map(projectKey));
+    $("#counts").innerHTML = state.loaded.sessions ? [
+      ["critical", inbox.filter(x => x.sev === "critical").length, "need you"],
+      ["warn", n("review"), "review ready"],
+      ["info", n("working") + n("pending"), "working"],
+      ["", live.length, "live sessions"],
+      ["", projKeys.size, "projects"],
+    ].map(([tone, v, l]) => `<span class="count ${tone}"><b>${v}</b>${esc(l)}</span>`).join("") : `<span class="count"><span class="skeleton" style="width:120px"></span></span>`;
+
+    // inbox
+    $("#inbox-n").textContent = state.loaded.sessions ? String(inbox.length) : "";
+    if (!state.loaded.sessions) {
+      $("#inbox").innerHTML = state.err.sessions ? "" : `<div class="card"><div class="skeleton" style="width:40%"></div><div class="skeleton" style="width:70%"></div></div>`;
+    } else if (!inbox.length) {
+      $("#inbox").innerHTML = `<div class="empty"><b>Nothing is waiting on you.</b> No session is blocked, asking for a decision, or sitting in review.</div>`;
+    } else {
+      $("#inbox").innerHTML = inbox.map(({ s, sev }) => {
+        const b = bucket(s), p = projectKey(s), ps = s.post_turn_summary || {};
+        const need = ps.needs_action, did = ps.recent_action;
+        return `<article class="card ${sev}">
+          <div class="row">
+            <a class="title" href="${SESSION_URL(s.id)}" target="_blank" rel="noopener">${esc(s.title || s.id)}</a>
+            ${s.unread ? `<span class="dot-unread" title="unread"></span>` : ""}
+            <span class="chip ${BUCKET_TONE[b]}">${BUCKET_LABEL[b]}</span>
+            <span class="chip proj">${esc(prettyProject(p))}</span>
+            <span class="chip plain">${esc(where(s))}</span>
+          </div>
+          ${need ? `<div class="ask"><strong>Needs: </strong>${esc(need)}</div>` : b === "review" ? `<div class="ask">Work is ready for your review.</div>` : b === "blocked" ? `<div class="ask">Blocked and waiting.</div>` : ""}
+          ${did ? `<div class="did">${esc(did)}</div>` : ""}
+          <div class="foot"><span>updated ${ago(s.updated_at, now)}</span><span>started ${ago(s.created_at, now)}</span><span>${esc(s.id)}</span></div>
+        </article>`;
+      }).join("");
+    }
+
+    // projects
+    const groups = new Map();
+    for (const s of state.sessions) {
+      const k = projectKey(s);
+      if (!groups.has(k)) groups.set(k, []);
+      groups.get(k).push(s);
+    }
+    const lanes = [...groups.entries()].map(([k, ss]) => {
+      ss.sort((a, b) => (Date.parse(b.updated_at) || 0) - (Date.parse(a.updated_at) || 0));
+      return { k, ss, live: ss.filter(s => bucket(s) !== "archived"), last: Date.parse(ss[0].updated_at) || 0 };
+    }).filter(g => g.live.length || state.archived).sort((a, b) => b.last - a.last);
+    $("#projects-n").textContent = state.loaded.sessions ? String(lanes.length) : "";
+    $("#lanes").innerHTML = !state.loaded.sessions ? `<div class="lane"><div class="skeleton" style="width:50%"></div><div class="skeleton"></div></div>` :
+      lanes.map(g => {
+        const r = repoFor(g.k), latest = g.ss[0], lb = bucket(latest), ps = latest.post_turn_summary || {};
+        const attn = g.live.filter(s => severity(s)).length;
+        return `<article class="lane">
+          <h3><span>${esc(prettyProject(g.k))}</span><small>${g.live.length} live${g.ss.length !== g.live.length ? ` · ${g.ss.length - g.live.length} archived` : ""}${attn ? ` · <span style="color:var(--critical)">${attn} need you</span>` : ""}</small></h3>
+          ${r ? `<div class="repo"><a href="${esc(r.url)}" target="_blank" rel="noopener">${esc(r.full_name)}</a><span>pushed ${ago(r.pushed_at, now)}</span>${r.visibility === "public" ? `<span>public</span>` : ""}</div>` : `<div class="repo"><span>no matching repo</span></div>`}
+          <div class="latest"><b>${esc(latest.title)}</b> <span class="chip ${BUCKET_TONE[lb]}">${BUCKET_LABEL[lb]}</span> ${ago(latest.updated_at, now)}${ps.recent_action ? `<br>${esc(ps.recent_action)}` : ""}</div>
+          ${g.ss.length > 1 ? `<ul>${g.ss.slice(1, 4).map(s => { const b = bucket(s); return `<li><span class="chip ${BUCKET_TONE[b]}">${BUCKET_LABEL[b]}</span><a class="t" href="${SESSION_URL(s.id)}" target="_blank" rel="noopener">${esc(s.title)}</a><span class="age">${ago(s.updated_at, now)}</span></li>`; }).join("")}${g.ss.length > 4 ? `<li class="age">and ${g.ss.length - 4} more</li>` : ""}</ul>` : ""}
+        </article>`;
+      }).join("") || `<div class="empty">No sessions yet.</div>`;
+
+    // table
+    const q = state.q.trim().toLowerCase();
+    const FMAP = { working: ["working", "pending"], blocked: ["blocked", "failed"], review: ["review"], done: ["done"] };
+    const allowed = state.f.size ? new Set([...state.f].flatMap(f => FMAP[f] || [])) : null;
+    const rows = state.sessions.filter(s => {
+      const b = bucket(s);
+      if (b === "archived" && !state.archived) return false;
+      if (allowed && !allowed.has(b)) return false;
+      if (!q) return true;
+      const ps = s.post_turn_summary || {};
+      return [s.title, prettyProject(projectKey(s)), ps.recent_action, ps.needs_action, s.id].some(v => String(v || "").toLowerCase().includes(q));
+    }).sort((a, b) => (Date.parse(b.updated_at) || 0) - (Date.parse(a.updated_at) || 0));
+    $("#sessions-n").textContent = state.loaded.sessions ? `${rows.length} of ${state.sessions.length}` : "";
+    $("#sessions tbody").innerHTML = rows.map(s => {
+      const b = bucket(s), ps = s.post_turn_summary || {};
+      return `<tr>
+        <td class="t"><a href="${SESSION_URL(s.id)}" target="_blank" rel="noopener">${esc(s.title || s.id)}</a>${s.unread ? ` <span class="dot-unread" title="unread"></span>` : ""}</td>
+        <td>${esc(prettyProject(projectKey(s)))}</td>
+        <td><span class="chip ${BUCKET_TONE[b]}">${BUCKET_LABEL[b]}</span></td>
+        <td>${esc(where(s))}</td>
+        <td class="age" title="${esc(s.updated_at)}">${ago(s.updated_at, now)}</td>
+        <td class="sum">${ps.needs_action ? `<span class="need">Needs: ${esc(ps.needs_action)}</span>${ps.recent_action ? "<br>" : ""}` : ""}${esc(ps.recent_action || "")}</td>
+      </tr>`;
+    }).join("") || `<tr><td colspan="6" class="age">${state.loaded.sessions ? "No sessions match." : "Loading…"}</td></tr>`;
+
+    // tasks
+    $("#tasks-n").textContent = state.loaded.triggers ? String(state.triggers.length) : "";
+    $("#tasks").innerHTML = !state.loaded.triggers ? (state.err.triggers ? "" : `<div class="task"><span class="skeleton" style="width:200px"></span></div>`) :
+      state.triggers.length ? state.triggers.map(t => {
+        const lr = t.last_run || {};
+        const okRun = String(lr.status || "").toUpperCase() === "SUCCEEDED";
+        return `<div class="task">
+          <b>${esc(t.name || t.id)}</b>
+          <span class="chip ${t.enabled ? "ok" : ""}">${t.enabled ? "enabled" : "paused"}</span>
+          ${t.cron_expression ? `<code>${esc(t.cron_expression)}</code>` : t.run_once_at ? `<span>once at ${esc(t.run_once_at)}</span>` : `<span>fires on demand</span>`}
+          ${t.next_run_at ? `<span>next ${ago(t.next_run_at, now).replace(" ago", "")}</span>` : ""}
+          ${lr.status ? `<span class="chip ${okRun ? "ok" : "critical"}">last run ${esc(String(lr.status).toLowerCase())}${lr.fired_at ? ", " + ago(lr.fired_at, now) : ""}</span>` : `<span class="chip plain">never run</span>`}
+        </div>`;
+      }).join("") : `<div class="empty"><b>No scheduled tasks.</b> A nightly roll-up that writes a digest and pings you only when something needs you is planned for Phase 3.</div>`;
+
+    // freshness
+    const at = state.at.sessions;
+    $("#freshness").textContent = state.loaded.sessions ? `Sessions as of ${new Date(at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}` : state.err.sessions ? "Session feed unavailable" : "Loading sessions…";
+
+    renderErrors();
+  }
+
+  const FIX = {
+    needs_reauth: "Reconnect Claude Code Remote in claude.ai Settings, then Connectors.",
+    server_not_connected: "Add the Claude Code Remote connector in claude.ai Settings, then Connectors.",
+    selection_required: "More than one Claude Code Remote connector is available. Choose one when claude.ai asks.",
+    not_in_manifest: "This page is not allowed to use Claude Code Remote for your account. Allow it from the artifact's Permissions menu.",
+    blocked_by_policy: "Your organisation's policy blocks this tool for this page.",
+    approval_required: "This read needs your approval.",
+    not_granted: "Open this page on claude.ai, signed in, so it can read your sessions.",
+    capability_disabled: "This viewer cannot run connector calls. Open the page on claude.ai.",
+    consent_required: "Allow Claude Code Remote for this page when asked, then try again.",
+  };
+  function renderErrors() {
+    const errs = Object.entries(state.err).filter(([, e]) => e);
+    const box = $("#page-notice");
+    if (!errs.length) { box.hidden = true; box.innerHTML = ""; return; }
+    const codes = new Set(errs.map(([, e]) => e.code));
+    const items = errs.map(([k, e]) => {
+      const fix = FIX[e.code] || (e.code === "tool_error" ? "The connector answered with an error." : "Could not reach the connector right now.");
+      const retry = e.code === "approval_required" || e.retryable ? `<button class="btn" type="button" data-retry="${k}">Try again</button>` : "";
+      return `<div><b>${esc(k)}</b>: ${esc(fix)} ${retry}<div class="code">${esc(e.code)}${e.message ? " · " + esc(String(e.message).slice(0, 200)) : ""}</div></div>`;
+    });
+    const tone = codes.has("needs_reauth") || codes.has("server_not_connected") || codes.has("not_granted") || codes.has("capability_disabled") ? "critical" : "warn";
+    box.className = "notice " + tone;
+    box.innerHTML = (codes.size === 1 && errs.length === 3 ? `<div>Every feed failed the same way, so this is about the connection rather than one feed.</div>` : "") + items.join("");
+    box.hidden = false;
+  }
+
+  // ---------- data ----------
+  function onEvent(key, apply) {
+    return ev => {
+      if (ev.type === "error") {
+        const e = ev.error || {};
+        const authz = ["needs_reauth", "server_not_connected", "blocked_by_policy", "approval_required", "not_in_manifest", "not_granted", "capability_disabled", "consent_required"].includes(e.code);
+        if (authz) { state.loaded[key] = false; if (key === "sessions") state.sessions = []; }
+        state.err[key] = e; render(); return;
+      }
+      state.err[key] = null;
+      const body = unwrap(ev.result && ev.result.payload);
+      const storedAt = ev.result && ev.result.cache && ev.result.cache.storedAt;
+      Promise.resolve(apply(body)).then(() => {
+        state.at[key] = storedAt || Date.now();
+        state.loaded[key] = true; render();
+      }).catch(e => { state.err[key] = { code: (e && e.code) || "upstream_error", message: e && e.message }; render(); });
+    };
+  }
+  async function morePages(first) {
+    let all = Array.isArray(first.data) ? first.data.slice() : [];
+    let more = !!first.has_more, last = first.last_id, pages = 1;
+    while (more && last && pages < 4) {
+      const r = await state.mcp.callTool(SERVER, "list_sessions", { limit: 100, after_id: last }, { cache: { staleTime: 60000, gcTime: 600000 } });
+      const b = unwrap(r.payload);
+      all = all.concat(Array.isArray(b.data) ? b.data : []);
+      more = !!b.has_more; last = b.last_id; pages++;
+    }
+    // de-dupe by id
+    const seen = new Set();
+    return all.filter(s => s && s.id && !seen.has(s.id) && seen.add(s.id));
+  }
+  const subs = {};
+  function subscribe() {
+    const mcp = state.mcp;
+    const cache = { staleTime: 60000, gcTime: 600000 };
+    subs.sessions = mcp.watchTool(SERVER, "list_sessions", { limit: 100 }, onEvent("sessions", async body => { state.sessions = await morePages(body); }), { cache, refetchInterval: 60000 });
+    subs.repos = mcp.watchTool(SERVER, "list_repos", { limit: 200 }, onEvent("repos", body => { state.repos = Array.isArray(body.repos) ? body.repos : []; }), { cache: { staleTime: 300000, gcTime: 3600000 }, refetchInterval: 300000 });
+    subs.triggers = mcp.watchTool(SERVER, "list_triggers", { limit: 100 }, onEvent("triggers", body => { state.triggers = Array.isArray(body.data) ? body.data : []; }), { cache: { staleTime: 300000, gcTime: 3600000 }, refetchInterval: 300000 });
+  }
+  async function retry(key) {
+    const mcp = state.mcp; if (!mcp) return;
+    const call = { sessions: ["list_sessions", { limit: 100 }], repos: ["list_repos", { limit: 200 }], triggers: ["list_triggers", { limit: 100 }] }[key];
+    if (!call) return;
+    try {
+      const r = await mcp.callTool(SERVER, call[0], call[1], { cache: { refresh: true, staleTime: 60000 } });
+      onEvent(key, {
+        sessions: async b => { state.sessions = await morePages(b); },
+        repos: b => { state.repos = Array.isArray(b.repos) ? b.repos : []; },
+        triggers: b => { state.triggers = Array.isArray(b.data) ? b.data : []; },
+      }[key])({ type: "data", result: r });
+    } catch (e) { state.err[key] = e || { code: "upstream_error" }; render(); }
+  }
+  async function refreshAll() {
+    const btn = $("#refresh"); btn.disabled = true;
+    try { if (state.mcp) await state.mcp.invalidate(SERVER); } catch (e) {}
+    setTimeout(() => { btn.disabled = false; }, 1500);
+  }
+
+  // ---------- wiring ----------
+  $("#q").addEventListener("input", e => { state.q = e.target.value; render(); });
+  document.querySelectorAll(".toggle").forEach(b => b.addEventListener("click", () => {
+    const f = b.dataset.f; if (state.f.has(f)) state.f.delete(f); else state.f.add(f);
+    b.setAttribute("aria-pressed", state.f.has(f) ? "true" : "false"); render();
+  }));
+  const arch = $("#show-archived"); arch.checked = state.archived;
+  arch.addEventListener("change", () => { state.archived = arch.checked; try { localStorage.setItem("overseer.archived", arch.checked ? "1" : "0"); } catch (e) {} render(); });
+  $("#refresh").addEventListener("click", refreshAll);
+  $("#page-notice").addEventListener("click", e => { const b = e.target.closest("[data-retry]"); if (b) retry(b.dataset.retry); });
+
+  render();
+  (async () => {
+    let mcp = null;
+    try { mcp = window.claude && typeof window.claude.use === "function" ? await window.claude.use("mcp") : null; } catch (e) { mcp = null; }
+    if (!mcp) {
+      state.err.sessions = { code: "not_granted" }; render();
+      $("#freshness").textContent = "Not connected";
+      return;
+    }
+    state.mcp = mcp;
+    subscribe();
+  })();
+})();
+</script>
