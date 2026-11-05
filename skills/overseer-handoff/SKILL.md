@@ -5,24 +5,52 @@ description: Write this session's state to the Overseer dashboard at handoff. Us
 
 # Overseer handoff
 
-Write one `projects/<repo>` document and one `sessions/<session_id>` document to the Overseer database, per `docs/PROTOCOL.md` in the Overseer repo. The page URL is OVERSEER_URL in that repo's README. If it still reads "not yet published", stop and tell Simon the dashboard has no URL yet.
+Write one `projects/<repo>` and one `sessions/<session_id>` document to the Overseer database. Fields are in `docs/PROTOCOL.md`. The page is https://claude.ai/artifact/AQEzPc9KAg8UewgEDPL4RQ.
 
-## Steps
+## Procedure
 
-1. **Repo and branch.** Run `git rev-parse --show-toplevel` and `git remote get-url origin` to get the repository name, lowercase, without owner. Run `git branch --show-current` for the branch.
-2. **Unpushed and uncommitted.** `git status --porcelain` non-empty means `uncommitted: true`. `git log @{upstream}..HEAD --oneline` non-empty, or no upstream at all, means `unpushed: true`.
-3. **Machine.** `cloud` if this is a cloud container, `mac` if running under Remote Control on the Mac, `pc` or `edge-lab` if the work was driven there. Use the one where the files live.
-4. **Running.** List every service, dev server, game process or background task this session started and did not stop. Empty array if none.
-5. **Waiting on Simon.** Short items only he can resolve: approvals, decisions, a go-ahead, a credential. Take them from the conversation.
-6. **Next.** Two to five short next steps.
-7. **Summary.** One line on where the work stands.
-8. **Session id and URL.** Call `get_session` with no id; take `session_id` and build `https://claude.ai/code/<session_id>`.
-9. **Write.** Load the tool with `ToolSearch` query `select:ArtifactData`. Then one `batch` call to OVERSEER_URL with two `set` writes: `projects/<repo>` with the full field set, `sessions/<session_id>` with the subset plus `title`. `updated_at` is now, ISO 8601 UTC.
-10. **Tag.** Call `set_session_tags` on this session to add `project:<repo>` if it is not already there.
-11. **Reply.** Three lines to Simon: where the work stands, what is waiting on him, what is still running. Nothing else.
+1. **Facts from git.** Run:
+
+   ```
+   git rev-parse --abbrev-ref HEAD
+   git rev-list --count @{u}..HEAD 2>/dev/null || echo unknown
+   git status --porcelain | wc -l
+   ```
+
+   Branch is the first output. `unpushed` is true if the count is above 0 or is `unknown`. `uncommitted` is true if the last count is above 0.
+2. **Repo.** The repository name, lowercase, without owner. With no GitHub repo, use a short lowercase slug of the project name.
+3. **Session id and URL.** Take the id from the session's own context (`get_session` with no id if needed). The URL is `https://claude.ai/code/<session_id>`.
+4. **Machine.** `cloud` when running in a cloud container, otherwise the machine's hostname in lowercase.
+5. **From the conversation.** `running` (services left running), `waiting_on_simon` (items only he can resolve), `next` (two to five steps), `summary` (one line).
+6. **Write.** Load the tool with `ToolSearch` query `select:ArtifactData`. Make two `set` calls with `url` https://claude.ai/artifact/AQEzPc9KAg8UewgEDPL4RQ.
+
+   First, `collection` `projects`, `doc_id` `<repo>`, `data`:
+
+   ```json
+   {
+     "repo": "example-repo",
+     "project": "Example project",
+     "session_id": "session_EXAMPLE",
+     "session_url": "https://claude.ai/code/session_EXAMPLE",
+     "machine": "cloud",
+     "branch": "claude/example-branch",
+     "unpushed": false,
+     "uncommitted": true,
+     "running": [],
+     "waiting_on_simon": ["example: approve the example change"],
+     "next": ["example next step"],
+     "summary": "Example one-line summary.",
+     "updated_at": "2026-01-01T00:00:00Z"
+   }
+   ```
+
+   Second, `collection` `sessions`, `doc_id` `<session_id>`, `data` with `repo`, `session_id`, `session_url`, `machine`, `branch`, `unpushed`, `uncommitted`, `summary`, `updated_at` and `title` (the session title). `updated_at` is now, ISO 8601 UTC.
+7. **Tag.** Call `mcp__claude-code-remote__set_session_tags` with `session_ids` [own id] and `add` ["project:<repo>"].
+8. **Reply.** Three lines to Simon: where the work stands, what is waiting on him, what is still running. Nothing else.
 
 ## Rules
 
-- `set` replaces the document. Write the whole state, not a diff.
-- Never put secrets, tokens or file contents in the document.
-- If the write fails, say so in the reply and give the JSON so Simon can see the state anyway.
+- `set` replaces the document. Send every field each time.
+- Never write the `notes` collection. Only Simon writes it, from the page.
+- Never put secrets, tokens or file contents in a document.
+- If a write fails, say so in the reply and give the JSON.

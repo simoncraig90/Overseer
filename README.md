@@ -18,10 +18,14 @@ The page source lives at `page/overseer.html`. It is published as an Artifact fr
 
 ARTIFACT_URL: https://claude.ai/artifact/AQEzPc9KAg8UewgEDPL4RQ
 
+The page declares the GitHub connector as "GitHub". That name is unverified until the page is first opened.
+
 ## Repo layout
 
 ```
 README.md                         this file
+CLAUDE.md                         repo facts plus Simon's standing rules
+HANDOFF.md                        state of play and republish instructions
 .gitignore
 docs/PLAN.md                      what Overseer shows, the data layers, the phases
 docs/PROTOCOL.md                  v0 handoff protocol: document paths, fields, tagging, freshness

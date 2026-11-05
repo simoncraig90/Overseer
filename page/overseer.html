@@ -55,7 +55,6 @@
   .wrap { max-width: 1180px; margin: 0 auto; display: grid; gap: 28px; }
   .wrap > * { min-width: 0; }
 
-  /* Header */
   header { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px 24px; }
   h1 { font-family: var(--display); font-weight: 600; font-size: 28px; letter-spacing: 0.01em; margin: 0; line-height: 1.1; }
   .sub { color: var(--muted); margin: 4px 0 0; font-size: 13px; }
@@ -63,9 +62,9 @@
   .btn { border: 1px solid var(--line); background: var(--surface); border-radius: 6px; padding: 6px 12px; cursor: pointer; font-size: 13px; }
   .btn:hover { border-color: var(--accent); }
   .btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  .btn.small { padding: 2px 8px; font-size: 12px; }
   .btn[disabled] { opacity: .6; cursor: default; }
 
-  /* Count strip */
   .counts { display: flex; flex-wrap: wrap; gap: 8px; }
   .count { display: inline-flex; align-items: baseline; gap: 6px; padding: 6px 10px; border-radius: 6px; background: var(--surface); border: 1px solid var(--line); font-size: 13px; }
   .count b { font-family: var(--mono); font-weight: 500; font-size: 16px; font-variant-numeric: tabular-nums; }
@@ -73,12 +72,11 @@
   .count.warn b { color: var(--warn); }
   .count.info b { color: var(--info); }
 
-  /* Sections */
-  section > h2 { font-family: var(--display); font-weight: 600; font-size: 17px; margin: 0 0 10px; display: flex; align-items: baseline; gap: 10px; }
+  section > h2 { font-family: var(--display); font-weight: 600; font-size: 17px; margin: 0 0 10px; display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
   section > h2 .n { font-family: var(--mono); font-weight: 400; font-size: 13px; color: var(--muted); }
+  section > h2 .side { margin-left: auto; font-family: var(--body); font-weight: 400; font-size: 12px; color: var(--muted); }
   .hint { color: var(--muted); font-size: 13px; margin: 0 0 10px; max-width: 70ch; }
 
-  /* Inbox cards */
   .inbox { display: grid; gap: 10px; }
   .card { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px 12px 16px; position: relative; display: grid; gap: 6px; min-width: 0; }
   .card::before { content: ""; position: absolute; left: 0; top: 10px; bottom: 10px; width: 3px; border-radius: 2px; background: var(--muted); }
@@ -89,10 +87,10 @@
   .card .title { font-weight: 600; font-size: 15px; }
   .card .ask { font-size: 14px; }
   .card .ask strong { font-weight: 600; color: var(--critical); }
+  .card .ask ul { margin: 2px 0 0; padding-left: 18px; }
   .card .did { color: var(--muted); font-size: 13px; }
   .card .foot { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 12px; color: var(--muted); font-family: var(--mono); }
 
-  /* Chips */
   .chip { display: inline-flex; align-items: center; gap: 5px; border-radius: 999px; padding: 1px 8px; font-size: 12px; line-height: 18px; white-space: nowrap; background: var(--neutral-bg); color: var(--fg); }
   .chip::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; opacity: .9; }
   .chip.critical { background: var(--critical-bg); color: var(--critical); }
@@ -104,9 +102,9 @@
   .chip.proj::before { display: none; }
   .dot-unread { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); vertical-align: middle; }
 
-  /* Projects */
-  .lanes { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 10px; }
+  .lanes { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 10px; }
   .lane { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; display: grid; gap: 8px; min-width: 0; align-content: start; }
+  .lane.parked { opacity: .7; }
   .lane h3 { margin: 0; font-size: 15px; font-weight: 600; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 6px 10px; }
   .lane h3 small { font-family: var(--mono); font-weight: 400; font-size: 12px; color: var(--muted); }
   .lane .latest { font-size: 13px; color: var(--muted); }
@@ -116,8 +114,18 @@
   .lane li .t { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .lane li .age { font-family: var(--mono); font-size: 12px; color: var(--muted); }
   .lane .repo { font-size: 12px; color: var(--muted); font-family: var(--mono); display: flex; flex-wrap: wrap; gap: 4px 10px; }
+  .lane .flags { display: flex; flex-wrap: wrap; gap: 4px 6px; }
+  .lane .block { border-top: 1px solid var(--line); padding-top: 8px; display: grid; gap: 4px; font-size: 13px; }
+  .lane .block .k { font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); font-weight: 600; display: flex; justify-content: space-between; gap: 8px; }
+  .lane .block .k span:last-child { text-transform: none; letter-spacing: 0; font-family: var(--mono); font-weight: 400; }
+  .lane .note { font-size: 13px; color: var(--fg); white-space: pre-wrap; }
+  .lane .mono { font-family: var(--mono); font-size: 12px; color: var(--muted); }
+  .lane .next { margin: 0; padding-left: 18px; font-size: 13px; color: var(--muted); }
+  .pri { font-family: var(--mono); font-size: 11px; padding: 0 6px; border-radius: 4px; border: 1px solid var(--line); color: var(--muted); }
+  .pri.p3 { color: var(--critical); border-color: var(--critical); }
+  .pri.p2 { color: var(--warn); border-color: var(--warn); }
+  .pri.p1 { color: var(--info); border-color: var(--info); }
 
-  /* Filters + table */
   .filters { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 10px; }
   .filters input[type="search"] { border: 1px solid var(--line); background: var(--surface); border-radius: 6px; padding: 6px 10px; font: inherit; min-width: 200px; flex: 1 1 200px; }
   .filters label { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); cursor: pointer; }
@@ -133,12 +141,10 @@
   td.sum { color: var(--muted); max-width: 46ch; }
   td.sum .need { color: var(--fg); }
 
-  /* Tasks */
   .tasks { display: grid; gap: 8px; }
   .task { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 10px 14px; display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; font-size: 13px; }
   .task code { font-family: var(--mono); font-size: 12px; background: var(--surface-2); padding: 1px 6px; border-radius: 4px; }
 
-  /* States */
   .empty { border: 1px dashed var(--line); border-radius: 8px; padding: 18px 16px; color: var(--muted); font-size: 13px; background: transparent; }
   .empty b { color: var(--fg); font-weight: 600; }
   .notice { border-radius: 8px; padding: 12px 14px; font-size: 13px; display: grid; gap: 6px; border: 1px solid var(--line); background: var(--surface); }
@@ -148,6 +154,16 @@
   .skeleton { height: 14px; border-radius: 4px; background: linear-gradient(90deg, var(--neutral-bg), var(--surface-2), var(--neutral-bg)); background-size: 200% 100%; animation: sh 1.2s linear infinite; }
   @keyframes sh { from { background-position: 200% 0 } to { background-position: -200% 0 } }
   @media (prefers-reduced-motion: reduce) { .skeleton { animation: none; } }
+
+  /* Notes editor: a fixed panel that render() never rebuilds */
+  .editor { position: fixed; right: 0; top: env(safe-area-inset-top, 0px); bottom: 0; width: min(420px, 100%); background: var(--surface); border-left: 1px solid var(--line); box-shadow: 0 0 24px rgba(0,0,0,.18); padding-block: 16px env(safe-area-inset-bottom, 0px); padding-left: 16px; padding-right: max(16px, env(safe-area-inset-right, 0px)); display: grid; grid-template-rows: auto 1fr auto; gap: 12px; z-index: 20; overflow: auto; }
+  .editor h3 { margin: 0; font-family: var(--display); font-size: 18px; }
+  .editor .f { display: grid; gap: 4px; font-size: 13px; color: var(--muted); }
+  .editor .fields { display: grid; gap: 12px; align-content: start; }
+  .editor input, .editor select, .editor textarea { font: inherit; color: var(--fg); background: var(--surface-2); border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; width: 100%; }
+  .editor textarea { min-height: 140px; resize: vertical; }
+  .editor .actions { display: flex; gap: 8px; justify-content: flex-end; align-items: center; }
+  .editor .status { margin-right: auto; font-size: 12px; color: var(--muted); }
 
   footer { color: var(--muted); font-size: 12px; max-width: 80ch; display: grid; gap: 4px; }
   footer code { font-family: var(--mono); }
@@ -164,7 +180,7 @@
       <p class="sub">Every Claude Code session and project, in one place. What needs you comes first.</p>
     </div>
     <div class="meta">
-      <span id="freshness">Connecting to Claude Code Remote…</span>
+      <span id="freshness">Connecting…</span>
       <button class="btn" id="refresh" type="button">Refresh</button>
     </div>
   </header>
@@ -175,13 +191,13 @@
 
   <section id="sec-inbox">
     <h2>Needs you <span class="n" id="inbox-n"></span></h2>
-    <p class="hint">Sessions that are blocked, waiting on a decision, or have work ready for review. Newest first within each severity.</p>
+    <p class="hint">Sessions that are blocked, waiting on a decision, or have work ready for review, plus anything a session's handoff report says only you can resolve.</p>
     <div class="inbox" id="inbox"></div>
   </section>
 
   <section id="sec-projects">
-    <h2>Projects <span class="n" id="projects-n"></span></h2>
-    <p class="hint">Grouped by session title with trailing numbers removed, matched to your GitHub repos where the names line up. Proper tagging comes with the handoff protocol.</p>
+    <h2>Projects <span class="n" id="projects-n"></span><span class="side" id="gh-status"></span></h2>
+    <p class="hint">Grouped by session title, matched to your GitHub repos where the names line up. Repos pushed in the last two months also show open pull requests and <code>claude/*</code> branches without a merged pull request. Handoff reports and your notes come from the page's own store.</p>
     <div class="lanes" id="lanes"></div>
   </section>
 
@@ -209,16 +225,34 @@
   </section>
 
   <footer>
-    <div>Phase 0. Data comes live from your Claude Code Remote connector, read as you, refreshed about every minute while the page is open. Nothing is stored.</div>
-    <div>Next: GitHub layer per repo (open PRs, unmerged <code>claude/*</code> branches), the session handoff protocol, your own notes and priorities, and buttons that message a session.</div>
+    <div>Sessions, repos and scheduled tasks come from your Claude Code Remote connector; pull requests and branches from your GitHub connector. Both are read as you while the page is open. Handoff reports are written by sessions with the overseer-handoff skill; notes are yours.</div>
+    <div>Next: buttons that message a session, a nightly roll-up that only pings you when something needs you, and a history strip.</div>
   </footer>
 </div>
+
+<aside class="editor" id="editor" hidden aria-label="Project notes">
+  <h3 id="ed-title">Notes</h3>
+  <div class="fields">
+    <div class="f"><label for="ed-priority">Priority</label>
+      <select id="ed-priority"><option value="0">none</option><option value="1">low</option><option value="2">medium</option><option value="3">high</option></select></div>
+    <div class="f"><label for="ed-parked"><input type="checkbox" id="ed-parked"> Parked (shown last, collapsed)</label></div>
+    <div class="f"><label for="ed-target">Target date</label><input type="date" id="ed-target"></div>
+    <div class="f"><label for="ed-note">Note</label><textarea id="ed-note" placeholder="What this project is for right now, what good looks like, what to remember."></textarea></div>
+  </div>
+  <div class="actions">
+    <span class="status" id="ed-status"></span>
+    <button class="btn" type="button" id="ed-cancel">Cancel</button>
+    <button class="btn primary" type="button" id="ed-save">Save</button>
+  </div>
+</aside>
 
 <script>
 (() => {
   "use strict";
-  const SERVER = "Claude Code Remote";
+  const CCR = "Claude Code Remote";
+  const GH = "GitHub";
   const SESSION_URL = id => "https://claude.ai/code/" + encodeURIComponent(id);
+  const GH_MAX_REPOS = 12, GH_WINDOW_DAYS = 60, STALE_MS = 3600e3;
 
   // Title key -> repo name, for the few titles that do not share the repo's name.
   // Everything else matches by substring against the repo list.
@@ -228,13 +262,16 @@
     "strangerhood security and test review": "StrangerBot", "strangerhood android app": "Strangerhood-android",
     "soma": "Soma", "edge/hl": "edge-lab", "hands-free claude voice tool": "gandalf",
     "wrackline": "wrackline-capture-ios", "seo": "SEO", "fix generator for answer-intel": "SEO",
+    "global dashboard for claude code repos": "Overseer", "overseer": "Overseer",
   };
 
   const state = {
-    mcp: null, sessions: [], repos: [], triggers: [],
-    at: { sessions: null, repos: null, triggers: null },
-    err: { sessions: null, repos: null, triggers: null },
-    loaded: { sessions: false, repos: false, triggers: false },
+    mcp: null, db: null, user: null, canWrite: null,
+    sessions: [], repos: [], triggers: [],
+    reports: {}, notes: {}, gh: {}, ghErr: null, ghSubs: {},
+    at: { sessions: null }, err: { sessions: null, repos: null, triggers: null, store: null },
+    loaded: { sessions: false, repos: false, triggers: false, reports: false, notes: false },
+    storeSlow: false,
     q: "", f: new Set(), archived: false,
   };
   try { state.archived = localStorage.getItem("overseer.archived") === "1"; } catch (e) {}
@@ -242,8 +279,11 @@
   // ---------- helpers ----------
   const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
   const $ = sel => document.querySelector(sel);
+  const arr = v => Array.isArray(v) ? v : [];
+  const strs = v => arr(v).map(x => String(x)).filter(Boolean);
   function unwrap(p) {
     if (typeof p === "string") { try { p = JSON.parse(p); } catch (e) { return {}; } }
+    if (Array.isArray(p)) return p;
     if (p && typeof p === "object" && p.ccr && typeof p.ccr === "object") p = p.ccr;
     return p && typeof p === "object" ? p : {};
   }
@@ -257,6 +297,7 @@
     const w = Math.round(d / 7); if (w < 9) return w + "w ago";
     return Math.round(d / 30) + "mo ago";
   }
+  const until = (iso, now) => { const t = Date.parse(iso); if (!t) return ""; const d = Math.round((t - (now || Date.now())) / 864e5); return d < 0 ? Math.abs(d) + "d overdue" : d === 0 ? "today" : "in " + d + "d"; };
   function bucket(s) {
     const b = String(s.status_bucket || "").replace("SESSION_STATUS_BUCKET_", "");
     const st = String(s.session_status || "").replace("SESSION_STATUS_", "");
@@ -276,15 +317,17 @@
     if (k === "bridge") return "Local";
     return k || "";
   }
+  const repoName = r => String(r.full_name || "").split("/").pop();
   function projectKey(s) {
+    const tagged = arr(s.tags).map(String).find(t => t.startsWith("project:"));
+    if (tagged) return tagged.slice(8).toLowerCase();
     const t = String(s.title || "").trim();
     let k = t.toLowerCase().replace(/\s*\d+$/, "").trim();
     if (!k || k === "cloud" || k === "cloud session" || k === "untitled") k = "unsorted";
     if (ALIASES[k]) return ALIASES[k].toLowerCase();
-    // substring match against repos, longest repo name wins
     let best = null;
     for (const r of state.repos) {
-      const name = String(r.full_name || "").split("/").pop().toLowerCase();
+      const name = repoName(r).toLowerCase();
       if (!name) continue;
       if (k === name || k.includes(name) || (name.length > 3 && name.includes(k))) {
         if (!best || name.length > best.length) best = name;
@@ -292,16 +335,16 @@
     }
     return best || k;
   }
-  function repoFor(key) {
-    return state.repos.find(r => String(r.full_name || "").split("/").pop().toLowerCase() === key) || null;
-  }
+  const repoFor = key => state.repos.find(r => repoName(r).toLowerCase() === key) || null;
   function prettyProject(key) {
-    const r = repoFor(key); if (r) return String(r.full_name).split("/").pop();
+    const r = repoFor(key); if (r) return repoName(r);
     if (key === "unsorted") return "Unsorted";
+    const rep = state.reports[key]; if (rep && rep.project) return String(rep.project);
     const s = state.sessions.find(x => projectKey(x) === key);
     const t = s ? String(s.title || "").replace(/\s*\d+$/, "").trim() : "";
     return t || key;
   }
+  const dbKey = key => String(key).toLowerCase().replace(/[^a-z0-9_\-.~:@+]/g, "-").slice(0, 120) || "unsorted";
   function severity(s) {
     const b = bucket(s);
     const need = s.post_turn_summary && s.post_turn_summary.needs_action;
@@ -311,35 +354,82 @@
     if (b === "review") return "warn";
     return null;
   }
+  // GitHub derived facts for one repo
+  function ghFacts(key) {
+    const g = state.gh[key]; if (!g) return null;
+    const prs = arr(g.prs), branches = arr(g.branches);
+    const open = prs.filter(p => p && p.state === "open");
+    const byHead = new Map(); prs.forEach(p => { const ref = p && p.head && p.head.ref; if (ref && !byHead.has(ref)) byHead.set(ref, p); else if (ref && p.state === "open") byHead.set(ref, p); });
+    const stray = branches.filter(b => b && /^claude\//.test(b.name)).map(b => {
+      const p = byHead.get(b.name);
+      if (!p) return { name: b.name, why: "no PR" };
+      if (p.merged || p.merged_at) return null;
+      if (p.state === "open") return null;
+      return { name: b.name, why: "PR closed, not merged", pr: p };
+    }).filter(Boolean);
+    return { open, stray, loading: g.loading, err: g.err, at: g.at };
+  }
+  // Handoff report facts
+  function reportFacts(key, latestActivity) {
+    const r = state.reports[key]; if (!r) return null;
+    const at = Date.parse(r.updated_at) || 0;
+    const stale = latestActivity && at && latestActivity - at > STALE_MS;
+    return { r, at, stale, waiting: strs(r.waiting_on_simon), running: strs(r.running), next: strs(r.next) };
+  }
 
   // ---------- rendering ----------
   function render() {
     const now = Date.now();
     const live = state.sessions.filter(s => bucket(s) !== "archived");
-    const inbox = live.map(s => ({ s, sev: severity(s) })).filter(x => x.sev)
-      .sort((a, b) => (a.sev === b.sev ? 0 : a.sev === "critical" ? -1 : 1) || (Date.parse(b.s.updated_at) || 0) - (Date.parse(a.s.updated_at) || 0));
 
-    // counts
+    // groups
+    const groups = new Map();
+    for (const s of state.sessions) { const k = projectKey(s); if (!groups.has(k)) groups.set(k, []); groups.get(k).push(s); }
+    for (const k of Object.keys(state.reports)) if (!groups.has(k)) groups.set(k, []);
+    const lanes = [...groups.entries()].map(([k, ss]) => {
+      ss.sort((a, b) => (Date.parse(b.updated_at) || 0) - (Date.parse(a.updated_at) || 0));
+      const liveSs = ss.filter(s => bucket(s) !== "archived");
+      const last = ss.length ? (Date.parse(ss[0].updated_at) || 0) : 0;
+      const rep = reportFacts(k, last), gh = ghFacts(k), note = state.notes[dbKey(k)] || null;
+      const risks = (rep ? (rep.r.unpushed ? 1 : 0) + (rep.r.uncommitted ? 1 : 0) + (rep.stale ? 1 : 0) + (rep.running.length ? 1 : 0) : 0) + (gh ? gh.stray.length : 0);
+      const attn = liveSs.filter(s => severity(s)).length + (rep ? rep.waiting.length : 0);
+      return { k, ss, live: liveSs, last: Math.max(last, rep ? rep.at : 0), rep, gh, note, risks, attn, parked: !!(note && note.parked), pri: note ? Number(note.priority) || 0 : 0 };
+    }).filter(g => g.live.length || g.rep || state.archived)
+      .sort((a, b) => (a.parked - b.parked) || (b.pri - a.pri) || (b.attn - a.attn) || (b.last - a.last));
+
+    // inbox
+    const inbox = live.map(s => ({ kind: "session", s, sev: severity(s), t: Date.parse(s.updated_at) || 0 })).filter(x => x.sev)
+      .concat(lanes.filter(g => g.rep && g.rep.waiting.length).map(g => ({ kind: "report", g, sev: "critical", t: g.rep.at })))
+      .sort((a, b) => (a.sev === b.sev ? 0 : a.sev === "critical" ? -1 : 1) || b.t - a.t);
+
     const n = k => live.filter(s => bucket(s) === k).length;
-    const projKeys = new Set(live.map(projectKey));
+    const risks = lanes.reduce((a, g) => a + g.risks, 0);
     $("#counts").innerHTML = state.loaded.sessions ? [
       ["critical", inbox.filter(x => x.sev === "critical").length, "need you"],
       ["warn", n("review"), "review ready"],
+      ["warn", risks, "risk flags"],
       ["info", n("working") + n("pending"), "working"],
       ["", live.length, "live sessions"],
-      ["", projKeys.size, "projects"],
+      ["", lanes.filter(g => !g.parked).length, "projects"],
     ].map(([tone, v, l]) => `<span class="count ${tone}"><b>${v}</b>${esc(l)}</span>`).join("") : `<span class="count"><span class="skeleton" style="width:120px"></span></span>`;
 
-    // inbox
     $("#inbox-n").textContent = state.loaded.sessions ? String(inbox.length) : "";
     if (!state.loaded.sessions) {
       $("#inbox").innerHTML = state.err.sessions ? "" : `<div class="card"><div class="skeleton" style="width:40%"></div><div class="skeleton" style="width:70%"></div></div>`;
     } else if (!inbox.length) {
-      $("#inbox").innerHTML = `<div class="empty"><b>Nothing is waiting on you.</b> No session is blocked, asking for a decision, or sitting in review.</div>`;
+      $("#inbox").innerHTML = `<div class="empty"><b>Nothing is waiting on you.</b> No session is blocked, asking for a decision, or sitting in review, and no handoff report lists anything only you can do.</div>`;
     } else {
-      $("#inbox").innerHTML = inbox.map(({ s, sev }) => {
-        const b = bucket(s), p = projectKey(s), ps = s.post_turn_summary || {};
-        const need = ps.needs_action, did = ps.recent_action;
+      $("#inbox").innerHTML = inbox.map(x => {
+        if (x.kind === "report") {
+          const { g } = x, r = g.rep.r;
+          return `<article class="card critical">
+            <div class="row"><span class="title">${esc(prettyProject(g.k))}</span><span class="chip critical">handoff report</span><span class="chip plain">${esc(r.machine || "")}</span>${r.branch ? `<span class="chip plain">${esc(r.branch)}</span>` : ""}</div>
+            <div class="ask"><strong>Only you can: </strong><ul>${g.rep.waiting.map(w => `<li>${esc(w)}</li>`).join("")}</ul></div>
+            ${r.summary ? `<div class="did">${esc(r.summary)}</div>` : ""}
+            <div class="foot"><span>reported ${ago(r.updated_at, now)}</span>${g.rep.stale ? `<span style="color:var(--critical)">a session has worked since</span>` : ""}${r.session_url ? `<a href="${esc(r.session_url)}" target="_blank" rel="noopener">open session</a>` : ""}</div>
+          </article>`;
+        }
+        const { s, sev } = x, b = bucket(s), p = projectKey(s), ps = s.post_turn_summary || {};
         return `<article class="card ${sev}">
           <div class="row">
             <a class="title" href="${SESSION_URL(s.id)}" target="_blank" rel="noopener">${esc(s.title || s.id)}</a>
@@ -348,36 +438,19 @@
             <span class="chip proj">${esc(prettyProject(p))}</span>
             <span class="chip plain">${esc(where(s))}</span>
           </div>
-          ${need ? `<div class="ask"><strong>Needs: </strong>${esc(need)}</div>` : b === "review" ? `<div class="ask">Work is ready for your review.</div>` : b === "blocked" ? `<div class="ask">Blocked and waiting.</div>` : ""}
-          ${did ? `<div class="did">${esc(did)}</div>` : ""}
+          ${ps.needs_action ? `<div class="ask"><strong>Needs: </strong>${esc(ps.needs_action)}</div>` : b === "review" ? `<div class="ask">Work is ready for your review.</div>` : b === "blocked" ? `<div class="ask">Blocked and waiting.</div>` : ""}
+          ${ps.recent_action ? `<div class="did">${esc(ps.recent_action)}</div>` : ""}
           <div class="foot"><span>updated ${ago(s.updated_at, now)}</span><span>started ${ago(s.created_at, now)}</span><span>${esc(s.id)}</span></div>
         </article>`;
       }).join("");
     }
 
     // projects
-    const groups = new Map();
-    for (const s of state.sessions) {
-      const k = projectKey(s);
-      if (!groups.has(k)) groups.set(k, []);
-      groups.get(k).push(s);
-    }
-    const lanes = [...groups.entries()].map(([k, ss]) => {
-      ss.sort((a, b) => (Date.parse(b.updated_at) || 0) - (Date.parse(a.updated_at) || 0));
-      return { k, ss, live: ss.filter(s => bucket(s) !== "archived"), last: Date.parse(ss[0].updated_at) || 0 };
-    }).filter(g => g.live.length || state.archived).sort((a, b) => b.last - a.last);
     $("#projects-n").textContent = state.loaded.sessions ? String(lanes.length) : "";
+    const ghStatus = state.ghErr ? `GitHub: ${esc(FIX[state.ghErr.code] || "unavailable")} <span class="code">${esc(state.ghErr.code)}</span>` : (Object.keys(state.ghSubs).length ? `GitHub: watching ${Object.keys(state.ghSubs).length} repos` : "");
+    $("#gh-status").innerHTML = ghStatus;
     $("#lanes").innerHTML = !state.loaded.sessions ? `<div class="lane"><div class="skeleton" style="width:50%"></div><div class="skeleton"></div></div>` :
-      lanes.map(g => {
-        const r = repoFor(g.k), latest = g.ss[0], lb = bucket(latest), ps = latest.post_turn_summary || {};
-        const attn = g.live.filter(s => severity(s)).length;
-        return `<article class="lane">
-          <h3><span>${esc(prettyProject(g.k))}</span><small>${g.live.length} live${g.ss.length !== g.live.length ? ` · ${g.ss.length - g.live.length} archived` : ""}${attn ? ` · <span style="color:var(--critical)">${attn} need you</span>` : ""}</small></h3>
-          ${r ? `<div class="repo"><a href="${esc(r.url)}" target="_blank" rel="noopener">${esc(r.full_name)}</a><span>pushed ${ago(r.pushed_at, now)}</span>${r.visibility === "public" ? `<span>public</span>` : ""}</div>` : `<div class="repo"><span>no matching repo</span></div>`}
-          <div class="latest"><b>${esc(latest.title)}</b> <span class="chip ${BUCKET_TONE[lb]}">${BUCKET_LABEL[lb]}</span> ${ago(latest.updated_at, now)}${ps.recent_action ? `<br>${esc(ps.recent_action)}` : ""}</div>
-          ${g.ss.length > 1 ? `<ul>${g.ss.slice(1, 4).map(s => { const b = bucket(s); return `<li><span class="chip ${BUCKET_TONE[b]}">${BUCKET_LABEL[b]}</span><a class="t" href="${SESSION_URL(s.id)}" target="_blank" rel="noopener">${esc(s.title)}</a><span class="age">${ago(s.updated_at, now)}</span></li>`; }).join("")}${g.ss.length > 4 ? `<li class="age">and ${g.ss.length - 4} more</li>` : ""}</ul>` : ""}
-        </article>`;
-      }).join("") || `<div class="empty">No sessions yet.</div>`;
+      lanes.map(g => renderLane(g, now)).join("") || `<div class="empty">No sessions yet.</div>`;
 
     // table
     const q = state.q.trim().toLowerCase();
@@ -414,28 +487,75 @@
           <b>${esc(t.name || t.id)}</b>
           <span class="chip ${t.enabled ? "ok" : ""}">${t.enabled ? "enabled" : "paused"}</span>
           ${t.cron_expression ? `<code>${esc(t.cron_expression)}</code>` : t.run_once_at ? `<span>once at ${esc(t.run_once_at)}</span>` : `<span>fires on demand</span>`}
-          ${t.next_run_at ? `<span>next ${ago(t.next_run_at, now).replace(" ago", "")}</span>` : ""}
+          ${t.next_run_at ? `<span>next ${esc(until(t.next_run_at, now))}</span>` : ""}
           ${lr.status ? `<span class="chip ${okRun ? "ok" : "critical"}">last run ${esc(String(lr.status).toLowerCase())}${lr.fired_at ? ", " + ago(lr.fired_at, now) : ""}</span>` : `<span class="chip plain">never run</span>`}
         </div>`;
-      }).join("") : `<div class="empty"><b>No scheduled tasks.</b> A nightly roll-up that writes a digest and pings you only when something needs you is planned for Phase 3.</div>`;
+      }).join("") : `<div class="empty"><b>No scheduled tasks.</b> A nightly roll-up that writes a digest and pings you only when something needs you is planned.</div>`;
 
-    // freshness
     const at = state.at.sessions;
-    $("#freshness").textContent = state.loaded.sessions ? `Sessions as of ${new Date(at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}` : state.err.sessions ? "Session feed unavailable" : "Loading sessions…";
+    $("#freshness").textContent = state.loaded.sessions ? `Sessions as of ${new Date(at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}${state.storeSlow ? " · store slow to answer" : ""}` : state.err.sessions ? "Session feed unavailable" : "Loading sessions…";
 
     renderErrors();
   }
 
+  function renderLane(g, now) {
+    const r = repoFor(g.k), latest = g.ss[0], rep = g.rep, gh = g.gh, note = g.note;
+    const head = `<h3><span>${note && note.priority > 0 ? `<span class="pri p${Number(note.priority)}">P${Number(note.priority)}</span> ` : ""}${esc(prettyProject(g.k))}</span>
+      <small>${g.live.length} live${g.ss.length !== g.live.length ? ` · ${g.ss.length - g.live.length} archived` : ""}${g.attn ? ` · <span style="color:var(--critical)">${g.attn} need you</span>` : ""}</small></h3>`;
+    if (g.parked) {
+      return `<article class="lane parked">${head}<div class="repo"><span>parked</span>${note && note.note ? `<span>${esc(String(note.note).split("\n")[0]).slice(0, 80)}</span>` : ""}${state.canWrite !== false ? `<button class="btn small" type="button" data-edit="${esc(g.k)}">Notes</button>` : ""}</div></article>`;
+    }
+    const flags = [];
+    if (rep) {
+      if (rep.r.unpushed) flags.push(`<span class="chip warn">unpushed</span>`);
+      if (rep.r.uncommitted) flags.push(`<span class="chip warn">uncommitted</span>`);
+      if (rep.running.length) flags.push(`<span class="chip info" title="${esc(rep.running.join(", "))}">${rep.running.length} running</span>`);
+      if (rep.stale) flags.push(`<span class="chip critical" title="A session has been active since this report">report stale</span>`);
+    }
+    if (gh && gh.stray.length) flags.push(`<span class="chip warn">${gh.stray.length} stray branch${gh.stray.length > 1 ? "es" : ""}</span>`);
+    if (gh && gh.open.length) flags.push(`<span class="chip info">${gh.open.length} open PR${gh.open.length > 1 ? "s" : ""}</span>`);
+    if (note && note.target) flags.push(`<span class="chip plain">target ${esc(until(note.target, now))}</span>`);
+
+    const latestHtml = latest ? (() => { const lb = bucket(latest), ps = latest.post_turn_summary || {}; return `<div class="latest"><b>${esc(latest.title)}</b> <span class="chip ${BUCKET_TONE[lb]}">${BUCKET_LABEL[lb]}</span> ${ago(latest.updated_at, now)}${ps.recent_action ? `<br>${esc(ps.recent_action)}` : ""}</div>`; })() : `<div class="latest">No sessions seen for this project.</div>`;
+    const others = g.ss.length > 1 ? `<ul>${g.ss.slice(1, 4).map(s => { const b = bucket(s); return `<li><span class="chip ${BUCKET_TONE[b]}">${BUCKET_LABEL[b]}</span><a class="t" href="${SESSION_URL(s.id)}" target="_blank" rel="noopener">${esc(s.title)}</a><span class="age">${ago(s.updated_at, now)}</span></li>`; }).join("")}${g.ss.length > 4 ? `<li class="age">and ${g.ss.length - 4} more</li>` : ""}</ul>` : "";
+
+    const repHtml = rep ? `<div class="block">
+        <div class="k"><span>Handoff report</span><span>${ago(rep.r.updated_at, now)}</span></div>
+        <div class="mono">${esc(rep.r.machine || "?")}${rep.r.branch ? ` · ${esc(rep.r.branch)}` : ""}${rep.r.session_url ? ` · <a href="${esc(rep.r.session_url)}" target="_blank" rel="noopener">session</a>` : ""}</div>
+        ${rep.r.summary ? `<div>${esc(rep.r.summary)}</div>` : ""}
+        ${rep.next.length ? `<ol class="next">${rep.next.slice(0, 3).map(x => `<li>${esc(x)}</li>`).join("")}</ol>` : ""}
+      </div>` : "";
+
+    let ghHtml = "";
+    if (r && gh) {
+      if (gh.loading && !gh.at) ghHtml = `<div class="block"><div class="k"><span>GitHub</span></div><div class="skeleton" style="width:60%"></div></div>`;
+      else if (gh.err) ghHtml = `<div class="block"><div class="k"><span>GitHub</span><span>${esc(gh.err.code)}</span></div><div class="mono">${esc(FIX[gh.err.code] || "Could not read this repo right now.")}</div></div>`;
+      else if (gh.open.length || gh.stray.length) ghHtml = `<div class="block"><div class="k"><span>GitHub</span><span>${gh.at ? ago(new Date(gh.at).toISOString(), now) : ""}</span></div>
+        ${gh.open.length ? `<ul>${gh.open.slice(0, 5).map(p => `<li><span class="chip info">${p.draft ? "draft" : "PR"}</span><a class="t" href="${esc(p.html_url || "")}" target="_blank" rel="noopener">#${esc(p.number)} ${esc(p.title)}</a><span class="age">${ago(p.created_at, now)}</span></li>`).join("")}</ul>` : ""}
+        ${gh.stray.length ? `<ul>${gh.stray.slice(0, 5).map(b => `<li><span class="chip warn">${esc(b.why)}</span><span class="t mono">${esc(b.name)}</span></li>`).join("")}${gh.stray.length > 5 ? `<li class="age">and ${gh.stray.length - 5} more</li>` : ""}</ul>` : ""}
+      </div>`;
+      else ghHtml = `<div class="block"><div class="k"><span>GitHub</span><span>clean</span></div></div>`;
+    }
+    const noteHtml = note && note.note ? `<div class="block"><div class="k"><span>Your note</span><span>${ago(note.updated_at, now)}</span></div><div class="note">${esc(note.note)}</div></div>` : "";
+    const edit = state.canWrite !== false && state.db ? `<div class="repo"><button class="btn small" type="button" data-edit="${esc(g.k)}">${note ? "Edit notes" : "Add notes"}</button></div>` : "";
+
+    return `<article class="lane">${head}
+      ${r ? `<div class="repo"><a href="${esc(r.url)}" target="_blank" rel="noopener">${esc(r.full_name)}</a><span>pushed ${ago(r.pushed_at, now)}</span>${r.visibility === "public" ? `<span>public</span>` : ""}</div>` : `<div class="repo"><span>no matching repo</span></div>`}
+      ${flags.length ? `<div class="flags">${flags.join("")}</div>` : ""}
+      ${latestHtml}${others}${repHtml}${ghHtml}${noteHtml}${edit}
+    </article>`;
+  }
+
   const FIX = {
-    needs_reauth: "Reconnect Claude Code Remote in claude.ai Settings, then Connectors.",
-    server_not_connected: "Add the Claude Code Remote connector in claude.ai Settings, then Connectors.",
-    selection_required: "More than one Claude Code Remote connector is available. Choose one when claude.ai asks.",
-    not_in_manifest: "This page is not allowed to use Claude Code Remote for your account. Allow it from the artifact's Permissions menu.",
+    needs_reauth: "Reconnect this connector in claude.ai Settings, then Connectors.",
+    server_not_connected: "Add this connector in claude.ai Settings, then Connectors.",
+    selection_required: "More than one connector has this name. Choose one when claude.ai asks.",
+    not_in_manifest: "This page is not allowed to use this connector for your account. Allow it from the artifact's Permissions menu.",
     blocked_by_policy: "Your organisation's policy blocks this tool for this page.",
     approval_required: "This read needs your approval.",
     not_granted: "Open this page on claude.ai, signed in, so it can read your sessions.",
     capability_disabled: "This viewer cannot run connector calls. Open the page on claude.ai.",
-    consent_required: "Allow Claude Code Remote for this page when asked, then try again.",
+    consent_required: "Allow the connector for this page when asked, then try again.",
   };
   function renderErrors() {
     const errs = Object.entries(state.err).filter(([, e]) => e);
@@ -443,23 +563,23 @@
     if (!errs.length) { box.hidden = true; box.innerHTML = ""; return; }
     const codes = new Set(errs.map(([, e]) => e.code));
     const items = errs.map(([k, e]) => {
-      const fix = FIX[e.code] || (e.code === "tool_error" ? "The connector answered with an error." : "Could not reach the connector right now.");
-      const retry = e.code === "approval_required" || e.retryable ? `<button class="btn" type="button" data-retry="${k}">Try again</button>` : "";
+      const fix = k === "store" ? (e.code === "not_granted" ? "Sign in on claude.ai to see handoff reports and notes." : "The page's store is not answering. Reports and notes may be missing or out of date.") : (FIX[e.code] || (e.code === "tool_error" ? "The connector answered with an error." : "Could not reach the connector right now."));
+      const retry = k !== "store" && (e.code === "approval_required" || e.retryable) ? `<button class="btn" type="button" data-retry="${k}">Try again</button>` : "";
       return `<div><b>${esc(k)}</b>: ${esc(fix)} ${retry}<div class="code">${esc(e.code)}${e.message ? " · " + esc(String(e.message).slice(0, 200)) : ""}</div></div>`;
     });
     const tone = codes.has("needs_reauth") || codes.has("server_not_connected") || codes.has("not_granted") || codes.has("capability_disabled") ? "critical" : "warn";
     box.className = "notice " + tone;
-    box.innerHTML = (codes.size === 1 && errs.length === 3 ? `<div>Every feed failed the same way, so this is about the connection rather than one feed.</div>` : "") + items.join("");
+    box.innerHTML = (codes.size === 1 && errs.length >= 3 ? `<div>Every feed failed the same way, so this is about the connection rather than one feed.</div>` : "") + items.join("");
     box.hidden = false;
   }
 
-  // ---------- data ----------
+  // ---------- data: Claude Code Remote ----------
+  const AUTHZ = ["needs_reauth", "server_not_connected", "blocked_by_policy", "approval_required", "not_in_manifest", "not_granted", "capability_disabled", "consent_required", "selection_required"];
   function onEvent(key, apply) {
     return ev => {
       if (ev.type === "error") {
         const e = ev.error || {};
-        const authz = ["needs_reauth", "server_not_connected", "blocked_by_policy", "approval_required", "not_in_manifest", "not_granted", "capability_disabled", "consent_required"].includes(e.code);
-        if (authz) { state.loaded[key] = false; if (key === "sessions") state.sessions = []; }
+        if (AUTHZ.includes(e.code)) { state.loaded[key] = false; if (key === "sessions") state.sessions = []; }
         state.err[key] = e; render(); return;
       }
       state.err[key] = null;
@@ -467,48 +587,139 @@
       const storedAt = ev.result && ev.result.cache && ev.result.cache.storedAt;
       Promise.resolve(apply(body)).then(() => {
         state.at[key] = storedAt || Date.now();
-        state.loaded[key] = true; render();
+        state.loaded[key] = true; render(); ensureGithub();
       }).catch(e => { state.err[key] = { code: (e && e.code) || "upstream_error", message: e && e.message }; render(); });
     };
   }
   async function morePages(first) {
-    let all = Array.isArray(first.data) ? first.data.slice() : [];
+    let all = arr(first.data).slice();
     let more = !!first.has_more, last = first.last_id, pages = 1;
     while (more && last && pages < 4) {
-      const r = await state.mcp.callTool(SERVER, "list_sessions", { limit: 100, after_id: last }, { cache: { staleTime: 60000, gcTime: 600000 } });
+      const r = await state.mcp.callTool(CCR, "list_sessions", { limit: 100, after_id: last }, { cache: { staleTime: 60000, gcTime: 600000 } });
       const b = unwrap(r.payload);
-      all = all.concat(Array.isArray(b.data) ? b.data : []);
+      all = all.concat(arr(b.data));
       more = !!b.has_more; last = b.last_id; pages++;
     }
-    // de-dupe by id
     const seen = new Set();
     return all.filter(s => s && s.id && !seen.has(s.id) && seen.add(s.id));
   }
+  const APPLY = {
+    sessions: async b => { state.sessions = await morePages(b); },
+    repos: b => { state.repos = arr(b.repos); },
+    triggers: b => { state.triggers = arr(b.data); },
+  };
   const subs = {};
   function subscribe() {
     const mcp = state.mcp;
-    const cache = { staleTime: 60000, gcTime: 600000 };
-    subs.sessions = mcp.watchTool(SERVER, "list_sessions", { limit: 100 }, onEvent("sessions", async body => { state.sessions = await morePages(body); }), { cache, refetchInterval: 60000 });
-    subs.repos = mcp.watchTool(SERVER, "list_repos", { limit: 200 }, onEvent("repos", body => { state.repos = Array.isArray(body.repos) ? body.repos : []; }), { cache: { staleTime: 300000, gcTime: 3600000 }, refetchInterval: 300000 });
-    subs.triggers = mcp.watchTool(SERVER, "list_triggers", { limit: 100 }, onEvent("triggers", body => { state.triggers = Array.isArray(body.data) ? body.data : []; }), { cache: { staleTime: 300000, gcTime: 3600000 }, refetchInterval: 300000 });
+    subs.sessions = mcp.watchTool(CCR, "list_sessions", { limit: 100 }, onEvent("sessions", APPLY.sessions), { cache: { staleTime: 60000, gcTime: 600000 }, refetchInterval: 60000 });
+    subs.repos = mcp.watchTool(CCR, "list_repos", { limit: 200 }, onEvent("repos", APPLY.repos), { cache: { staleTime: 300000, gcTime: 3600000 }, refetchInterval: 300000 });
+    subs.triggers = mcp.watchTool(CCR, "list_triggers", { limit: 100 }, onEvent("triggers", APPLY.triggers), { cache: { staleTime: 300000, gcTime: 3600000 }, refetchInterval: 300000 });
   }
   async function retry(key) {
-    const mcp = state.mcp; if (!mcp) return;
+    const mcp = state.mcp; if (!mcp || !APPLY[key]) return;
     const call = { sessions: ["list_sessions", { limit: 100 }], repos: ["list_repos", { limit: 200 }], triggers: ["list_triggers", { limit: 100 }] }[key];
-    if (!call) return;
     try {
-      const r = await mcp.callTool(SERVER, call[0], call[1], { cache: { refresh: true, staleTime: 60000 } });
-      onEvent(key, {
-        sessions: async b => { state.sessions = await morePages(b); },
-        repos: b => { state.repos = Array.isArray(b.repos) ? b.repos : []; },
-        triggers: b => { state.triggers = Array.isArray(b.data) ? b.data : []; },
-      }[key])({ type: "data", result: r });
+      const r = await mcp.callTool(CCR, call[0], call[1], { cache: { refresh: true, staleTime: 60000 } });
+      onEvent(key, APPLY[key])({ type: "data", result: r });
     } catch (e) { state.err[key] = e || { code: "upstream_error" }; render(); }
   }
   async function refreshAll() {
     const btn = $("#refresh"); btn.disabled = true;
-    try { if (state.mcp) await state.mcp.invalidate(SERVER); } catch (e) {}
+    try { if (state.mcp) { await state.mcp.invalidate(CCR); await state.mcp.invalidate(GH); } } catch (e) {}
     setTimeout(() => { btn.disabled = false; }, 1500);
+  }
+
+  // ---------- data: GitHub, per matched repo ----------
+  function ensureGithub() {
+    if (!state.mcp || state.ghErr || !state.loaded.sessions || !state.loaded.repos) return;
+    const keys = new Set(state.sessions.map(projectKey).concat(Object.keys(state.reports)));
+    const now = Date.now();
+    const candidates = [...keys].map(repoFor).filter(Boolean)
+      .filter(r => now - (Date.parse(r.pushed_at) || 0) < GH_WINDOW_DAYS * 864e5)
+      .sort((a, b) => (Date.parse(b.pushed_at) || 0) - (Date.parse(a.pushed_at) || 0))
+      .slice(0, GH_MAX_REPOS);
+    for (const r of candidates) {
+      const key = repoName(r).toLowerCase();
+      if (state.ghSubs[key]) continue;
+      const [owner, repo] = String(r.full_name).split("/");
+      if (!owner || !repo) continue;
+      state.gh[key] = { prs: null, branches: null, loading: true, err: null, at: null };
+      const opts = { cache: { staleTime: 300000, gcTime: 3600000 }, refetchInterval: 600000 };
+      const handler = field => ev => {
+        const g = state.gh[key]; if (!g) return;
+        if (ev.type === "error") {
+          const e = ev.error || {};
+          if (AUTHZ.includes(e.code)) { state.ghErr = e; stopGithub(); render(); return; }
+          g.err = e; g.loading = false; render(); return;
+        }
+        g.err = null;
+        const body = unwrap(ev.result && ev.result.payload);
+        g[field] = Array.isArray(body) ? body : arr(body.data || body.items);
+        g.at = (ev.result && ev.result.cache && ev.result.cache.storedAt) || Date.now();
+        g.loading = !(g.prs && g.branches);
+        render();
+      };
+      state.ghSubs[key] = [
+        state.mcp.watchTool(GH, "list_pull_requests", { owner, repo, state: "all", perPage: 30 }, handler("prs"), opts),
+        state.mcp.watchTool(GH, "list_branches", { owner, repo, perPage: 100 }, handler("branches"), opts),
+      ];
+    }
+  }
+  function stopGithub() {
+    for (const k of Object.keys(state.ghSubs)) { try { state.ghSubs[k].forEach(u => u()); } catch (e) {} }
+    state.ghSubs = {}; state.gh = {};
+  }
+
+  // ---------- data: the page's store (reports, notes) ----------
+  function subscribeStore() {
+    const db = state.db; if (!db) return;
+    let slow = setTimeout(() => { state.storeSlow = true; render(); }, 10000);
+    const clear = () => { if (slow) { clearTimeout(slow); slow = null; state.storeSlow = false; } };
+    db.collection("projects").onSnapshot(snap => {
+      const next = {}; snap.docs.forEach(d => { if (d.exists) next[d.id] = d.data(); });
+      state.reports = next; state.loaded.reports = true; if (!snap.metadata.fromCache) clear(); render(); ensureGithub();
+    }, e => { state.err.store = e; clear(); render(); });
+    db.collection("notes").onSnapshot(snap => {
+      const next = {}; snap.docs.forEach(d => { if (d.exists) next[d.id] = d.data(); });
+      state.notes = next; state.loaded.notes = true; if (!snap.metadata.fromCache) clear(); render();
+    }, e => { state.err.store = e; clear(); render(); });
+  }
+
+  // ---------- notes editor ----------
+  const ed = { key: null };
+  function openEditor(key) {
+    ed.key = key;
+    const n = state.notes[dbKey(key)] || {};
+    $("#ed-title").textContent = "Notes: " + prettyProject(key);
+    $("#ed-priority").value = String(Number(n.priority) || 0);
+    $("#ed-parked").checked = !!n.parked;
+    $("#ed-target").value = typeof n.target === "string" ? n.target : "";
+    $("#ed-note").value = typeof n.note === "string" ? n.note : "";
+    $("#ed-status").textContent = "";
+    $("#editor").hidden = false;
+    $("#ed-note").focus();
+  }
+  function closeEditor() { $("#editor").hidden = true; ed.key = null; }
+  let saving = false;
+  async function saveEditor() {
+    if (!ed.key || !state.db || saving) return;
+    saving = true; $("#ed-save").disabled = true; $("#ed-status").textContent = "Saving…";
+    const body = {
+      priority: Number($("#ed-priority").value) || 0,
+      parked: $("#ed-parked").checked,
+      target: $("#ed-target").value || "",
+      note: $("#ed-note").value.trim(),
+      updated_at: new Date().toISOString(),
+    };
+    try {
+      await state.db.doc("notes/" + dbKey(ed.key)).set(body);
+      $("#ed-status").textContent = "Saved";
+      setTimeout(closeEditor, 300);
+    } catch (e) {
+      const code = e && e.code;
+      $("#ed-status").textContent = code === "invalid_argument" ? "You cannot write notes on this page." : code === "quota_exceeded" ? "The store is full." : "Could not save. Try once more.";
+      if (code === "invalid_argument") state.canWrite = false;
+    } finally { saving = false; $("#ed-save").disabled = false; }
   }
 
   // ---------- wiring ----------
@@ -517,20 +728,23 @@
     const f = b.dataset.f; if (state.f.has(f)) state.f.delete(f); else state.f.add(f);
     b.setAttribute("aria-pressed", state.f.has(f) ? "true" : "false"); render();
   }));
-  const arch = $("#show-archived"); arch.checked = state.archived;
-  arch.addEventListener("change", () => { state.archived = arch.checked; try { localStorage.setItem("overseer.archived", arch.checked ? "1" : "0"); } catch (e) {} render(); });
+  const archEl = $("#show-archived"); archEl.checked = state.archived;
+  archEl.addEventListener("change", () => { state.archived = archEl.checked; try { localStorage.setItem("overseer.archived", archEl.checked ? "1" : "0"); } catch (e) {} render(); });
   $("#refresh").addEventListener("click", refreshAll);
   $("#page-notice").addEventListener("click", e => { const b = e.target.closest("[data-retry]"); if (b) retry(b.dataset.retry); });
+  $("#lanes").addEventListener("click", e => { const b = e.target.closest("[data-edit]"); if (b) openEditor(b.dataset.edit); });
+  $("#ed-cancel").addEventListener("click", closeEditor);
+  $("#ed-save").addEventListener("click", saveEditor);
+  document.addEventListener("keydown", e => { if (e.key === "Escape" && !$("#editor").hidden) closeEditor(); });
 
   render();
   (async () => {
-    let mcp = null;
-    try { mcp = window.claude && typeof window.claude.use === "function" ? await window.claude.use("mcp") : null; } catch (e) { mcp = null; }
-    if (!mcp) {
-      state.err.sessions = { code: "not_granted" }; render();
-      $("#freshness").textContent = "Not connected";
-      return;
-    }
+    const use = async name => { try { return window.claude && typeof window.claude.use === "function" ? await window.claude.use(name) : null; } catch (e) { return null; } };
+    const [mcp, db, user] = await Promise.all([use("mcp"), use("db"), use("user")]);
+    state.db = db; state.user = user;
+    if (user) { try { state.canWrite = await user.can("data.write"); } catch (e) { state.canWrite = null; } }
+    if (db) subscribeStore(); else { state.err.store = { code: "not_granted" }; }
+    if (!mcp) { state.err.sessions = { code: "not_granted" }; render(); $("#freshness").textContent = "Not connected"; return; }
     state.mcp = mcp;
     subscribe();
   })();

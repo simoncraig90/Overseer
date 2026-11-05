@@ -76,13 +76,13 @@ In Phase 0, before either fix exists, the page infers the project by stripping t
 
 ## Phases
 
-| Phase | Scope | Effort |
-| --- | --- | --- |
-| 0 | Read-only page on the live session feed. Needs-me inbox and project grouping by title. | An afternoon |
-| 1 | GitHub layer. Abandoned-branch and unpushed flags. | A day |
-| 2 | Database, handoff protocol, shared skill, Simon's annotations. | A day, plus adoption |
-| 3 | Buttons that message sessions, fire tasks and archive. Nightly roll-up. | Half a day |
-| 4 | History strip and metrics. | As wanted |
+| Phase | Scope | Effort | Status |
+| --- | --- | --- | --- |
+| 0 | Read-only page on the live session feed. Needs-me inbox and project grouping by title. | An afternoon | live |
+| 1 | GitHub layer. Abandoned-branch and unpushed flags. | A day | in progress |
+| 2 | Database, handoff protocol, shared skill, Simon's annotations. | A day, plus adoption | in progress |
+| 3 | Buttons that message sessions, fire tasks and archive. Nightly roll-up. | Half a day | not started |
+| 4 | History strip and metrics. | As wanted | not started |
 
 ## Unverified
 

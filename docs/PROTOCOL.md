@@ -1,23 +1,23 @@
-# Overseer handoff protocol, v0 draft
+# Overseer handoff protocol, v0.1
 
-Status: draft. This will change once Phase 2 lands and the first sessions have written real documents. Treat the field list as the intent, not a contract.
+Status: v0.1. This will change once Phase 2 lands and the first sessions have written real documents. Treat the field list as the intent, not a contract.
 
 ## Where documents live
 
 The Overseer page has its own database (the Artifact `db` capability). Sessions write to it with the `ArtifactData` tool, addressed by the page's URL.
 
-OVERSEER_URL: (not yet published; see README.md)
+OVERSEER_URL: https://claude.ai/artifact/AQEzPc9KAg8UewgEDPL4RQ
 
 Two collections:
 
-- `projects/<repo>`: one document per repository. `<repo>` is the GitHub repository name, lowercase, without the owner. Overwritten on every handoff. This is what the project lanes read.
+- `projects/<repo>`: one document per repository. `<repo>` is the GitHub repository name, lowercase, without the owner. For a project without a GitHub repo it is a short lowercase slug of the project name. Overwritten on every handoff. This is what the project lanes read.
 - `sessions/<session_id>`: one document per session. Written on every handoff by that session. This is what the history and the per-session view read.
 
 ## `projects/<repo>` fields
 
 | Field | Type | Meaning |
 | --- | --- | --- |
-| `repo` | string | GitHub repository name, lowercase. Same as the document id. |
+| `repo` | string | GitHub repository name, lowercase, or a short lowercase slug of the project name if there is no GitHub repo. Same as the document id. |
 | `project` | string | Display name for the lane, for example "Soulstone lab". |
 | `session_id` | string | The session that wrote this document. |
 | `session_url` | string | Link to that session on claude.ai. |
@@ -55,22 +55,54 @@ Example:
 
 A subset of the above: `repo`, `session_id`, `session_url`, `machine`, `branch`, `unpushed`, `uncommitted`, `summary`, `updated_at`. Add `title` (the session title as shown in the session list) so old sessions can be matched to projects later.
 
-## How a session writes it
+## Notes written by Simon from the page
+
+Collection `notes`. The document id is the same `<repo>` key as `projects`. Simon writes these from the page. Sessions may read them if useful, but never write them.
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `priority` | number | 0 none, 1 low, 2 medium, 3 high. |
+| `parked` | bool | True if Simon has parked the project. |
+| `note` | string | Free text. |
+| `target` | string | Date as `YYYY-MM-DD`, or empty. |
+| `updated_at` | string | ISO 8601, UTC. |
+
+## How a session writes
 
 1. Load the tool. Call `ToolSearch` with query `select:ArtifactData`.
 2. Build the JSON for `projects/<repo>` from git and from the conversation.
-3. Call `ArtifactData` with action `set`, `url` set to OVERSEER_URL, `collection` `projects`, `doc_id` `<repo>`, and the JSON as `data`.
-4. Call it again for `sessions/<session_id>`. Where several documents are written in one go, use action `batch`.
+3. Call `ArtifactData` once for the project document:
 
-`set` replaces the whole document. That is intended. A handoff document describes the state now, not a merge of past states.
+```
+url:        https://claude.ai/artifact/AQEzPc9KAg8UewgEDPL4RQ
+action:     "set"
+collection: "projects"
+doc_id:     "<repo>"
+data:       { ...all fields from the table above... }
+```
+
+4. Call it again for the session document:
+
+```
+url:        https://claude.ai/artifact/AQEzPc9KAg8UewgEDPL4RQ
+action:     "set"
+collection: "sessions"
+doc_id:     "<session_id>"
+data:       { ...the session fields... }
+```
+
+`set` replaces the whole document, so send every field each time. That is intended. A handoff document describes the state now, not a merge of past states. Documents are plain JSON objects, at most 256 KiB.
 
 ## Tagging rule
 
 At session start, before any other work, call `set_session_tags` on the current session and add `project:<repo>`. The dashboard groups sessions by this tag. For sessions without it, the page falls back to its mapping table and then to the title with trailing digits stripped.
 
-## Freshness
+## How the page uses it
 
-The dashboard compares `updated_at` on `projects/<repo>` with the latest activity time across all sessions tagged or mapped to that project. When the latest session activity is newer than `updated_at`, the lane is flagged stale: work has happened since the last handoff, and the protocol fields may no longer describe it. A missing document is shown as "no handoff yet", not as stale.
+- Each project lane shows branch, unpushed, uncommitted, running, waiting_on_simon and next, plus the age of `updated_at`.
+- Items in `waiting_on_simon` also appear in the Needs you inbox.
+- A project is marked stale when `updated_at` is more than an hour older than the latest session activity for that project. A missing document is shown as "no handoff yet", not as stale.
+- The page reads the `projects` and `notes` collections live.
 
 ## Trust
 
