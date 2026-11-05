@@ -134,7 +134,7 @@
   .tablewrap { overflow-x: auto; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; }
   table { border-collapse: collapse; width: 100%; min-width: 760px; font-size: 13px; }
   th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
-  th { font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); font-weight: 600; background: var(--surface-2); position: sticky; top: 0; }
+  th { font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); font-weight: 600; background: var(--surface-2); }
   tr:last-child td { border-bottom: 0; }
   td.t { font-weight: 500; white-space: nowrap; }
   td.age { font-family: var(--mono); font-size: 12px; color: var(--muted); white-space: nowrap; font-variant-numeric: tabular-nums; }
@@ -256,19 +256,19 @@
 
   // Title key -> repo name, for the few titles that do not share the repo's name.
   // Everything else matches by substring against the repo list.
-  const ALIASES = {
+  const ALIASES = Object.assign(Object.create(null), {
     "soulstone": "soulstone-lab", "soulstone survivors remake": "soulstone-lab",
     "strangerhood": "StrangerBot", "strangerhood red team": "StrangerBot", "strangerhood android": "Strangerhood-android",
     "strangerhood security and test review": "StrangerBot", "strangerhood android app": "Strangerhood-android",
     "soma": "Soma", "edge/hl": "edge-lab", "hands-free claude voice tool": "gandalf",
     "wrackline": "wrackline-capture-ios", "seo": "SEO", "fix generator for answer-intel": "SEO",
     "global dashboard for claude code repos": "Overseer", "overseer": "Overseer",
-  };
+  });
 
   const state = {
     mcp: null, db: null, user: null, canWrite: null,
     sessions: [], repos: [], triggers: [],
-    reports: {}, notes: {}, gh: {}, ghErr: null, ghSubs: {},
+    reports: Object.create(null), notes: Object.create(null), gh: Object.create(null), ghErr: null, ghSubs: Object.create(null),
     at: { sessions: null }, err: { sessions: null, repos: null, triggers: null, store: null },
     loaded: { sessions: false, repos: false, triggers: false, reports: false, notes: false },
     storeSlow: false,
@@ -279,8 +279,16 @@
   // ---------- helpers ----------
   const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
   const $ = sel => document.querySelector(sel);
+  const lastHtml = new Map();
+  function setHtml(sel, html) { if (lastHtml.get(sel) === html) return; lastHtml.set(sel, html); $(sel).innerHTML = html; }
+  function setText(sel, t) { const el = $(sel); if (el.textContent !== t) el.textContent = t; }
   const arr = v => Array.isArray(v) ? v : [];
-  const strs = v => arr(v).map(x => String(x)).filter(Boolean);
+  const strs = v => arr(v).map(x => (typeof x === "string" || typeof x === "number") ? String(x) : "").filter(Boolean);
+  const txt = v => (typeof v === "string" || typeof v === "number") ? String(v) : "";
+  const safeUrl = u => /^https?:\/\/[^\s"'<>]+$/i.test(String(u || "")) ? String(u) : "";
+  const sessionUrl = u => /^https:\/\/claude\.ai\/(code|artifact)\/[A-Za-z0-9_\-]+$/.test(String(u || "")) ? String(u) : "";
+  const own = (o, k) => Object.prototype.hasOwnProperty.call(o, k);
+  const nullObj = () => Object.create(null);
   function unwrap(p) {
     if (typeof p === "string") { try { p = JSON.parse(p); } catch (e) { return {}; } }
     if (Array.isArray(p)) return p;
@@ -288,7 +296,7 @@
     return p && typeof p === "object" ? p : {};
   }
   function ago(iso, now) {
-    const t = Date.parse(iso); if (!t) return "";
+    const t = typeof iso === "number" ? iso : Date.parse(iso); if (!t || !Number.isFinite(t)) return "";
     let s = Math.max(0, Math.round(((now || Date.now()) - t) / 1000));
     if (s < 60) return "just now";
     const m = Math.round(s / 60); if (m < 60) return m + "m ago";
@@ -297,7 +305,12 @@
     const w = Math.round(d / 7); if (w < 9) return w + "w ago";
     return Math.round(d / 30) + "mo ago";
   }
-  const until = (iso, now) => { const t = Date.parse(iso); if (!t) return ""; const d = Math.round((t - (now || Date.now())) / 864e5); return d < 0 ? Math.abs(d) + "d overdue" : d === 0 ? "today" : "in " + d + "d"; };
+  const until = (ymd, now) => {
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(ymd || "")); if (!m) return "";
+    const target = new Date(+m[1], +m[2] - 1, +m[3]); const today = new Date(now || Date.now()); today.setHours(0, 0, 0, 0);
+    const d = Math.round((target - today) / 864e5); if (!Number.isFinite(d)) return "";
+    return d < 0 ? Math.abs(d) + "d overdue" : d === 0 ? "today" : "in " + d + "d";
+  };
   function bucket(s) {
     const b = String(s.status_bucket || "").replace("SESSION_STATUS_BUCKET_", "");
     const st = String(s.session_status || "").replace("SESSION_STATUS_", "");
@@ -311,25 +324,32 @@
   }
   const BUCKET_LABEL = { working: "working", pending: "pending", blocked: "blocked", review: "review ready", failed: "failed", done: "done", archived: "archived", unknown: "unknown" };
   const BUCKET_TONE = { working: "info", pending: "info", blocked: "critical", review: "warn", failed: "critical", done: "ok", archived: "", unknown: "" };
+  const blabel = b => own(BUCKET_LABEL, b) ? BUCKET_LABEL[b] : b;
+  const btone = b => own(BUCKET_TONE, b) ? BUCKET_TONE[b] : "";
   function where(s) {
     const k = s.environment_kind || "";
     if (k === "anthropic_cloud") return "Cloud";
-    if (k === "bridge") return "Local";
+    if (k === "bridge") return "Your machine";
     return k || "";
   }
   const repoName = r => String(r.full_name || "").split("/").pop();
+  let keyCache = new Map();
   function projectKey(s) {
+    if (s && s.id && keyCache.has(s.id)) return keyCache.get(s.id);
+    const k = computeKey(s); if (s && s.id) keyCache.set(s.id, k); return k;
+  }
+  function computeKey(s) {
     const tagged = arr(s.tags).map(String).find(t => t.startsWith("project:"));
     if (tagged) return tagged.slice(8).toLowerCase();
     const t = String(s.title || "").trim();
     let k = t.toLowerCase().replace(/\s*\d+$/, "").trim();
     if (!k || k === "cloud" || k === "cloud session" || k === "untitled") k = "unsorted";
-    if (ALIASES[k]) return ALIASES[k].toLowerCase();
+    if (own(ALIASES, k)) return ALIASES[k].toLowerCase();
     let best = null;
     for (const r of state.repos) {
       const name = repoName(r).toLowerCase();
       if (!name) continue;
-      if (k === name || k.includes(name) || (name.length > 3 && name.includes(k))) {
+      if (k === name || k.startsWith(name + " ") || k.startsWith(name + "-") || (k.length >= 4 && name.startsWith(k))) {
         if (!best || name.length > best.length) best = name;
       }
     }
@@ -339,47 +359,64 @@
   function prettyProject(key) {
     const r = repoFor(key); if (r) return repoName(r);
     if (key === "unsorted") return "Unsorted";
-    const rep = state.reports[key]; if (rep && rep.project) return String(rep.project);
-    const s = state.sessions.find(x => projectKey(x) === key);
+    const rep = state.reports[key]; if (rep && txt(rep.project)) return txt(rep.project);
+    const s = firstByKey.get(key);
     const t = s ? String(s.title || "").replace(/\s*\d+$/, "").trim() : "";
     return t || key;
   }
-  const dbKey = key => String(key).toLowerCase().replace(/[^a-z0-9_\-.~:@+]/g, "-").slice(0, 120) || "unsorted";
-  function severity(s) {
+  const dbKey = key => encodeURIComponent(String(key).toLowerCase()).replace(/[^A-Za-z0-9_\-.:@+]/g, c => "~" + c.charCodeAt(0).toString(16)).slice(0, 180) || "unsorted";
+  const NEED_NOISE = /^(none|n\/a|nothing|no|-|\s*)$/i;
+  function needText(s) {
+    const t = txt(s.post_turn_summary && s.post_turn_summary.needs_action).trim();
+    return NEED_NOISE.test(t) ? "" : t;
+  }
+  function severity(s, now) {
     const b = bucket(s);
-    const need = s.post_turn_summary && s.post_turn_summary.needs_action;
     if (b === "archived") return null;
     if (b === "blocked" || b === "failed") return "critical";
-    if (need) return "critical";
+    const need = needText(s);
+    const running = String(s.session_status || "").endsWith("RUNNING");
+    if (need && !running) {
+      const age = (now || Date.now()) - (Date.parse(s.updated_at) || 0);
+      return age < 14 * 864e5 ? "critical" : "warn";
+    }
     if (b === "review") return "warn";
     return null;
   }
   // GitHub derived facts for one repo
   function ghFacts(key) {
     const g = state.gh[key]; if (!g) return null;
-    const prs = arr(g.prs), branches = arr(g.branches);
+    const prs = arr(g.prs).filter(p => p && typeof p === "object"), branches = arr(g.branches).filter(b => b && typeof b === "object");
     const open = prs.filter(p => p && p.state === "open");
-    const byHead = new Map(); prs.forEach(p => { const ref = p && p.head && p.head.ref; if (ref && !byHead.has(ref)) byHead.set(ref, p); else if (ref && p.state === "open") byHead.set(ref, p); });
-    const stray = branches.filter(b => b && /^claude\//.test(b.name)).map(b => {
+    const rank = p => p.state === "open" ? 3 : (p.merged || p.merged_at) ? 2 : 1;
+    const byHead = new Map(); prs.forEach(p => { const ref = p && p.head && txt(p.head.ref); if (!ref) return; const cur = byHead.get(ref); if (!cur || rank(p) > rank(cur)) byHead.set(ref, p); });
+    const stray = branches.filter(b => b && /^claude\//.test(txt(b.name))).map(b => {
       const p = byHead.get(b.name);
       if (!p) return { name: b.name, why: "no PR" };
-      if (p.merged || p.merged_at) return null;
-      if (p.state === "open") return null;
+      if (rank(p) >= 2) return null;
       return { name: b.name, why: "PR closed, not merged", pr: p };
     }).filter(Boolean);
-    return { open, stray, loading: g.loading, err: g.err, at: g.at };
+    const at = Number.isFinite(+g.at) ? +g.at : null;
+    const err = g.errs.prs || g.errs.branches || null;
+    return { open, stray, loading: g.loading, err, at, complete: Array.isArray(g.prs) && Array.isArray(g.branches), partial: !!(g.prs || g.branches) && !(g.prs && g.branches) };
   }
   // Handoff report facts
   function reportFacts(key, latestActivity) {
     const r = state.reports[key]; if (!r) return null;
-    const at = Date.parse(r.updated_at) || 0;
+    const at = Math.min(Date.parse(r.updated_at) || 0, Date.now());
     const stale = latestActivity && at && latestActivity - at > STALE_MS;
-    return { r, at, stale, waiting: strs(r.waiting_on_simon), running: strs(r.running), next: strs(r.next) };
+    return { r, at, stale, machine: txt(r.machine), branch: txt(r.branch), summary: txt(r.summary), url: sessionUrl(r.session_url),
+      waiting: strs(r.waiting_on_simon), running: strs(r.running), next: strs(r.next) };
   }
 
   // ---------- rendering ----------
-  function render() {
+  let firstByKey = new Map();
+  let renderTimer = null;
+  function render() { if (renderTimer) return; renderTimer = setTimeout(() => { renderTimer = null; renderNow(); }, 120); }
+  function renderNow() {
     const now = Date.now();
+    keyCache = new Map(); firstByKey = new Map();
+    for (const s of state.sessions) { const k = projectKey(s); if (!firstByKey.has(k)) firstByKey.set(k, s); }
     const live = state.sessions.filter(s => bucket(s) !== "archived");
 
     // groups
@@ -392,41 +429,45 @@
       const last = ss.length ? (Date.parse(ss[0].updated_at) || 0) : 0;
       const rep = reportFacts(k, last), gh = ghFacts(k), note = state.notes[dbKey(k)] || null;
       const risks = (rep ? (rep.r.unpushed ? 1 : 0) + (rep.r.uncommitted ? 1 : 0) + (rep.stale ? 1 : 0) + (rep.running.length ? 1 : 0) : 0) + (gh ? gh.stray.length : 0);
-      const attn = liveSs.filter(s => severity(s)).length + (rep ? rep.waiting.length : 0);
-      return { k, ss, live: liveSs, last: Math.max(last, rep ? rep.at : 0), rep, gh, note, risks, attn, parked: !!(note && note.parked), pri: note ? Number(note.priority) || 0 : 0 };
+      const attn = liveSs.filter(s => severity(s, now)).length + (rep ? rep.waiting.length : 0);
+      const pri = note ? Math.min(3, Math.max(0, Math.round(Number(note.priority)) || 0)) : 0;
+      return { k, ss, live: liveSs, last: Math.max(last, rep ? rep.at : 0), rep, gh, note, risks, attn, parked: !!(note && note.parked === true), pri };
     }).filter(g => g.live.length || g.rep || state.archived)
       .sort((a, b) => (a.parked - b.parked) || (b.pri - a.pri) || (b.attn - a.attn) || (b.last - a.last));
 
     // inbox
-    const inbox = live.map(s => ({ kind: "session", s, sev: severity(s), t: Date.parse(s.updated_at) || 0 })).filter(x => x.sev)
+    const inbox = live.map(s => ({ kind: "session", s, sev: severity(s, now), t: Date.parse(s.updated_at) || 0 })).filter(x => x.sev)
       .concat(lanes.filter(g => g.rep && g.rep.waiting.length).map(g => ({ kind: "report", g, sev: "critical", t: g.rep.at })))
       .sort((a, b) => (a.sev === b.sev ? 0 : a.sev === "critical" ? -1 : 1) || b.t - a.t);
 
     const n = k => live.filter(s => bucket(s) === k).length;
     const risks = lanes.reduce((a, g) => a + g.risks, 0);
-    $("#counts").innerHTML = state.loaded.sessions ? [
+    setHtml("#counts", state.loaded.sessions ? [
       ["critical", inbox.filter(x => x.sev === "critical").length, "need you"],
       ["warn", n("review"), "review ready"],
       ["warn", risks, "risk flags"],
       ["info", n("working") + n("pending"), "working"],
       ["", live.length, "live sessions"],
       ["", lanes.filter(g => !g.parked).length, "projects"],
-    ].map(([tone, v, l]) => `<span class="count ${tone}"><b>${v}</b>${esc(l)}</span>`).join("") : `<span class="count"><span class="skeleton" style="width:120px"></span></span>`;
+    ].map(([tone, v, l]) => `<span class="count ${tone}"><b>${v}</b>${esc(l)}</span>`).join("") : `<span class="count"><span class="skeleton" style="width:120px"></span></span>`);
 
-    $("#inbox-n").textContent = state.loaded.sessions ? String(inbox.length) : "";
+    setText("#inbox-n", state.loaded.sessions ? String(inbox.length) : "");
     if (!state.loaded.sessions) {
-      $("#inbox").innerHTML = state.err.sessions ? "" : `<div class="card"><div class="skeleton" style="width:40%"></div><div class="skeleton" style="width:70%"></div></div>`;
+      setHtml("#inbox", state.err.sessions ? "" : `<div class="card"><div class="skeleton" style="width:40%"></div><div class="skeleton" style="width:70%"></div></div>`);
     } else if (!inbox.length) {
-      $("#inbox").innerHTML = `<div class="empty"><b>Nothing is waiting on you.</b> No session is blocked, asking for a decision, or sitting in review, and no handoff report lists anything only you can do.</div>`;
+      const reportsOk = state.loaded.reports && !state.err.store;
+      setHtml("#inbox", reportsOk
+        ? `<div class="empty"><b>Nothing is waiting on you.</b> No session is blocked, asking for a decision, or sitting in review, and no handoff report lists anything only you can do.</div>`
+        : `<div class="empty"><b>No session is waiting on you.</b> Handoff reports have not loaded${state.err.store ? " (store error)" : " yet"}, so anything a session left for you is not shown.</div>`);
     } else {
-      $("#inbox").innerHTML = inbox.map(x => {
+      setHtml("#inbox", inbox.map(x => {
         if (x.kind === "report") {
-          const { g } = x, r = g.rep.r;
+          const { g } = x, f = g.rep;
           return `<article class="card critical">
-            <div class="row"><span class="title">${esc(prettyProject(g.k))}</span><span class="chip critical">handoff report</span><span class="chip plain">${esc(r.machine || "")}</span>${r.branch ? `<span class="chip plain">${esc(r.branch)}</span>` : ""}</div>
-            <div class="ask"><strong>Only you can: </strong><ul>${g.rep.waiting.map(w => `<li>${esc(w)}</li>`).join("")}</ul></div>
-            ${r.summary ? `<div class="did">${esc(r.summary)}</div>` : ""}
-            <div class="foot"><span>reported ${ago(r.updated_at, now)}</span>${g.rep.stale ? `<span style="color:var(--critical)">a session has worked since</span>` : ""}${r.session_url ? `<a href="${esc(r.session_url)}" target="_blank" rel="noopener">open session</a>` : ""}</div>
+            <div class="row"><span class="title">${esc(prettyProject(g.k))}</span><span class="chip critical">handoff report</span>${f.machine ? `<span class="chip plain">${esc(f.machine)}</span>` : ""}${f.branch ? `<span class="chip plain">${esc(f.branch)}</span>` : ""}</div>
+            <div class="ask"><strong>Only you can: </strong><ul>${f.waiting.map(w => `<li>${esc(w)}</li>`).join("")}</ul></div>
+            ${f.summary ? `<div class="did">${esc(f.summary)}</div>` : ""}
+            <div class="foot"><span>reported ${ago(f.at, now)}</span>${f.stale ? `<span style="color:var(--critical)">a session has worked since</span>` : ""}${f.url ? `<a href="${esc(f.url)}" target="_blank" rel="noopener">open session</a>` : ""}</div>
           </article>`;
         }
         const { s, sev } = x, b = bucket(s), p = projectKey(s), ps = s.post_turn_summary || {};
@@ -434,23 +475,23 @@
           <div class="row">
             <a class="title" href="${SESSION_URL(s.id)}" target="_blank" rel="noopener">${esc(s.title || s.id)}</a>
             ${s.unread ? `<span class="dot-unread" title="unread"></span>` : ""}
-            <span class="chip ${BUCKET_TONE[b]}">${BUCKET_LABEL[b]}</span>
+            <span class="chip ${btone(b)}">${blabel(b)}</span>
             <span class="chip proj">${esc(prettyProject(p))}</span>
             <span class="chip plain">${esc(where(s))}</span>
           </div>
-          ${ps.needs_action ? `<div class="ask"><strong>Needs: </strong>${esc(ps.needs_action)}</div>` : b === "review" ? `<div class="ask">Work is ready for your review.</div>` : b === "blocked" ? `<div class="ask">Blocked and waiting.</div>` : ""}
+          ${needText(s) ? `<div class="ask"><strong>Needs: </strong>${esc(needText(s))}${sev === "warn" && b !== "review" ? ` <span class="chip warn">asked ${esc(ago(s.updated_at, now))}</span>` : ""}</div>` : b === "review" ? `<div class="ask">Work is ready for your review.</div>` : b === "blocked" ? `<div class="ask">Blocked and waiting.</div>` : ""}
           ${ps.recent_action ? `<div class="did">${esc(ps.recent_action)}</div>` : ""}
           <div class="foot"><span>updated ${ago(s.updated_at, now)}</span><span>started ${ago(s.created_at, now)}</span><span>${esc(s.id)}</span></div>
         </article>`;
-      }).join("");
+      }).join(""));
     }
 
     // projects
-    $("#projects-n").textContent = state.loaded.sessions ? String(lanes.length) : "";
-    const ghStatus = state.ghErr ? `GitHub: ${esc(FIX[state.ghErr.code] || "unavailable")} <span class="code">${esc(state.ghErr.code)}</span>` : (Object.keys(state.ghSubs).length ? `GitHub: watching ${Object.keys(state.ghSubs).length} repos` : "");
-    $("#gh-status").innerHTML = ghStatus;
-    $("#lanes").innerHTML = !state.loaded.sessions ? `<div class="lane"><div class="skeleton" style="width:50%"></div><div class="skeleton"></div></div>` :
-      lanes.map(g => renderLane(g, now)).join("") || `<div class="empty">No sessions yet.</div>`;
+    setText("#projects-n", state.loaded.sessions ? String(lanes.length) : "");
+    const ghStatus = state.ghErr ? `GitHub: ${esc(own(FIX, state.ghErr.code) ? FIX[state.ghErr.code] : "unavailable")} <span class="code">${esc(state.ghErr.code)}</span> <button class="btn small" type="button" id="gh-retry">Try again</button>` : (Object.keys(state.ghSubs).length ? `GitHub: watching ${Object.keys(state.ghSubs).length} repos` : "");
+    setHtml("#gh-status", ghStatus);
+    setHtml("#lanes", !state.loaded.sessions ? `<div class="lane"><div class="skeleton" style="width:50%"></div><div class="skeleton"></div></div>` :
+      lanes.map(g => renderLane(g, now)).join("") || `<div class="empty">No sessions yet.</div>`);
 
     // table
     const q = state.q.trim().toLowerCase();
@@ -462,24 +503,24 @@
       if (allowed && !allowed.has(b)) return false;
       if (!q) return true;
       const ps = s.post_turn_summary || {};
-      return [s.title, prettyProject(projectKey(s)), ps.recent_action, ps.needs_action, s.id].some(v => String(v || "").toLowerCase().includes(q));
+      return [s.title, prettyProject(projectKey(s)), ps.recent_action, ps.needs_action, s.id].some(v => txt(v).toLowerCase().includes(q));
     }).sort((a, b) => (Date.parse(b.updated_at) || 0) - (Date.parse(a.updated_at) || 0));
-    $("#sessions-n").textContent = state.loaded.sessions ? `${rows.length} of ${state.sessions.length}` : "";
-    $("#sessions tbody").innerHTML = rows.map(s => {
+    setText("#sessions-n", state.loaded.sessions ? `${rows.length} of ${state.sessions.length}${state.truncated ? ", newest only" : ""}` : "");
+    setHtml("#sessions tbody", rows.map(s => {
       const b = bucket(s), ps = s.post_turn_summary || {};
       return `<tr>
         <td class="t"><a href="${SESSION_URL(s.id)}" target="_blank" rel="noopener">${esc(s.title || s.id)}</a>${s.unread ? ` <span class="dot-unread" title="unread"></span>` : ""}</td>
         <td>${esc(prettyProject(projectKey(s)))}</td>
-        <td><span class="chip ${BUCKET_TONE[b]}">${BUCKET_LABEL[b]}</span></td>
+        <td><span class="chip ${btone(b)}">${blabel(b)}</span></td>
         <td>${esc(where(s))}</td>
         <td class="age" title="${esc(s.updated_at)}">${ago(s.updated_at, now)}</td>
-        <td class="sum">${ps.needs_action ? `<span class="need">Needs: ${esc(ps.needs_action)}</span>${ps.recent_action ? "<br>" : ""}` : ""}${esc(ps.recent_action || "")}</td>
+        <td class="sum">${needText(s) ? `<span class="need">Needs: ${esc(needText(s))}</span>${txt(ps.recent_action) ? "<br>" : ""}` : ""}${esc(txt(ps.recent_action))}</td>
       </tr>`;
-    }).join("") || `<tr><td colspan="6" class="age">${state.loaded.sessions ? "No sessions match." : "Loading…"}</td></tr>`;
+    }).join("") || `<tr><td colspan="6" class="age">${state.loaded.sessions ? "No sessions match." : "Loading…"}</td></tr>`);
 
     // tasks
-    $("#tasks-n").textContent = state.loaded.triggers ? String(state.triggers.length) : "";
-    $("#tasks").innerHTML = !state.loaded.triggers ? (state.err.triggers ? "" : `<div class="task"><span class="skeleton" style="width:200px"></span></div>`) :
+    setText("#tasks-n", state.loaded.triggers ? String(state.triggers.length) : "");
+    setHtml("#tasks", !state.loaded.triggers ? (state.err.triggers ? "" : `<div class="task"><span class="skeleton" style="width:200px"></span></div>`) :
       state.triggers.length ? state.triggers.map(t => {
         const lr = t.last_run || {};
         const okRun = String(lr.status || "").toUpperCase() === "SUCCEEDED";
@@ -490,20 +531,25 @@
           ${t.next_run_at ? `<span>next ${esc(until(t.next_run_at, now))}</span>` : ""}
           ${lr.status ? `<span class="chip ${okRun ? "ok" : "critical"}">last run ${esc(String(lr.status).toLowerCase())}${lr.fired_at ? ", " + ago(lr.fired_at, now) : ""}</span>` : `<span class="chip plain">never run</span>`}
         </div>`;
-      }).join("") : `<div class="empty"><b>No scheduled tasks.</b> A nightly roll-up that writes a digest and pings you only when something needs you is planned.</div>`;
+      }).join("") : `<div class="empty"><b>No scheduled tasks.</b> A nightly roll-up that writes a digest and pings you only when something needs you is planned.</div>`);
 
+    if (state.truncated && !state.err.sessions) { /* noted beside the table count */ }
     const at = state.at.sessions;
-    $("#freshness").textContent = state.loaded.sessions ? `Sessions as of ${new Date(at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}${state.storeSlow ? " · store slow to answer" : ""}` : state.err.sessions ? "Session feed unavailable" : "Loading sessions…";
+    setText("#freshness", state.loaded.sessions ? `Sessions as of ${new Date(at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}${state.storeSlow ? " · store slow to answer" : ""}` : state.err.sessions ? "Session feed unavailable" : "Loading sessions…");
 
     renderErrors();
   }
 
+  function ghLists(gh, now) {
+    return (gh.open.length ? `<ul>${gh.open.slice(0, 5).map(p => `<li><span class="chip info">${p.draft ? "draft" : "PR"}</span><a class="t" href="${esc(safeUrl(p.html_url))}" target="_blank" rel="noopener">#${esc(txt(p.number))} ${esc(txt(p.title))}</a><span class="age">${ago(p.created_at, now)}</span></li>`).join("")}</ul>` : "")
+      + (gh.stray.length ? `<ul>${gh.stray.slice(0, 5).map(b => `<li><span class="chip warn" title="No pull request among the last 100 for this repo">${esc(b.why)}</span><span class="t mono">${esc(b.name)}</span></li>`).join("")}${gh.stray.length > 5 ? `<li class="age">and ${gh.stray.length - 5} more</li>` : ""}</ul>` : "");
+  }
   function renderLane(g, now) {
     const r = repoFor(g.k), latest = g.ss[0], rep = g.rep, gh = g.gh, note = g.note;
-    const head = `<h3><span>${note && note.priority > 0 ? `<span class="pri p${Number(note.priority)}">P${Number(note.priority)}</span> ` : ""}${esc(prettyProject(g.k))}</span>
+    const head = `<h3><span>${g.pri > 0 ? `<span class="pri p${g.pri}">P${g.pri}</span> ` : ""}${esc(prettyProject(g.k))}</span>
       <small>${g.live.length} live${g.ss.length !== g.live.length ? ` · ${g.ss.length - g.live.length} archived` : ""}${g.attn ? ` · <span style="color:var(--critical)">${g.attn} need you</span>` : ""}</small></h3>`;
     if (g.parked) {
-      return `<article class="lane parked">${head}<div class="repo"><span>parked</span>${note && note.note ? `<span>${esc(String(note.note).split("\n")[0]).slice(0, 80)}</span>` : ""}${state.canWrite !== false ? `<button class="btn small" type="button" data-edit="${esc(g.k)}">Notes</button>` : ""}</div></article>`;
+      return `<article class="lane parked">${head}<div class="repo"><span>parked</span>${note && txt(note.note) ? `<span>${esc(txt(note.note).split("\n")[0].slice(0, 80))}</span>` : ""}${state.canWrite !== false ? `<button class="btn small" type="button" data-edit="${esc(g.k)}">Notes</button>` : ""}</div></article>`;
     }
     const flags = [];
     if (rep) {
@@ -514,33 +560,33 @@
     }
     if (gh && gh.stray.length) flags.push(`<span class="chip warn">${gh.stray.length} stray branch${gh.stray.length > 1 ? "es" : ""}</span>`);
     if (gh && gh.open.length) flags.push(`<span class="chip info">${gh.open.length} open PR${gh.open.length > 1 ? "s" : ""}</span>`);
-    if (note && note.target) flags.push(`<span class="chip plain">target ${esc(until(note.target, now))}</span>`);
+    if (note && txt(note.target) && until(note.target, now)) flags.push(`<span class="chip plain">target ${esc(until(note.target, now))}</span>`);
 
-    const latestHtml = latest ? (() => { const lb = bucket(latest), ps = latest.post_turn_summary || {}; return `<div class="latest"><b>${esc(latest.title)}</b> <span class="chip ${BUCKET_TONE[lb]}">${BUCKET_LABEL[lb]}</span> ${ago(latest.updated_at, now)}${ps.recent_action ? `<br>${esc(ps.recent_action)}` : ""}</div>`; })() : `<div class="latest">No sessions seen for this project.</div>`;
-    const others = g.ss.length > 1 ? `<ul>${g.ss.slice(1, 4).map(s => { const b = bucket(s); return `<li><span class="chip ${BUCKET_TONE[b]}">${BUCKET_LABEL[b]}</span><a class="t" href="${SESSION_URL(s.id)}" target="_blank" rel="noopener">${esc(s.title)}</a><span class="age">${ago(s.updated_at, now)}</span></li>`; }).join("")}${g.ss.length > 4 ? `<li class="age">and ${g.ss.length - 4} more</li>` : ""}</ul>` : "";
+    const latestHtml = latest ? (() => { const lb = bucket(latest), ps = latest.post_turn_summary || {}; return `<div class="latest"><b>${esc(latest.title)}</b> <span class="chip ${btone(lb)}">${blabel(lb)}</span> ${ago(latest.updated_at, now)}${ps.recent_action ? `<br>${esc(ps.recent_action)}` : ""}</div>`; })() : `<div class="latest">No sessions seen for this project.</div>`;
+    const others = g.ss.length > 1 ? `<ul>${g.ss.slice(1, 4).map(s => { const b = bucket(s); return `<li><span class="chip ${btone(b)}">${blabel(b)}</span><a class="t" href="${SESSION_URL(s.id)}" target="_blank" rel="noopener">${esc(s.title)}</a><span class="age">${ago(s.updated_at, now)}</span></li>`; }).join("")}${g.ss.length > 4 ? `<li class="age">and ${g.ss.length - 4} more</li>` : ""}</ul>` : "";
 
     const repHtml = rep ? `<div class="block">
-        <div class="k"><span>Handoff report</span><span>${ago(rep.r.updated_at, now)}</span></div>
-        <div class="mono">${esc(rep.r.machine || "?")}${rep.r.branch ? ` · ${esc(rep.r.branch)}` : ""}${rep.r.session_url ? ` · <a href="${esc(rep.r.session_url)}" target="_blank" rel="noopener">session</a>` : ""}</div>
-        ${rep.r.summary ? `<div>${esc(rep.r.summary)}</div>` : ""}
+        <div class="k"><span>Handoff report</span><span>${ago(rep.at, now)}</span></div>
+        <div class="mono">${esc(rep.machine || "?")}${rep.branch ? ` · ${esc(rep.branch)}` : ""}${rep.url ? ` · <a href="${esc(rep.url)}" target="_blank" rel="noopener">session</a>` : ""}</div>
+        ${rep.summary ? `<div>${esc(rep.summary)}</div>` : ""}
         ${rep.next.length ? `<ol class="next">${rep.next.slice(0, 3).map(x => `<li>${esc(x)}</li>`).join("")}</ol>` : ""}
       </div>` : "";
 
     let ghHtml = "";
     if (r && gh) {
       if (gh.loading && !gh.at) ghHtml = `<div class="block"><div class="k"><span>GitHub</span></div><div class="skeleton" style="width:60%"></div></div>`;
-      else if (gh.err) ghHtml = `<div class="block"><div class="k"><span>GitHub</span><span>${esc(gh.err.code)}</span></div><div class="mono">${esc(FIX[gh.err.code] || "Could not read this repo right now.")}</div></div>`;
-      else if (gh.open.length || gh.stray.length) ghHtml = `<div class="block"><div class="k"><span>GitHub</span><span>${gh.at ? ago(new Date(gh.at).toISOString(), now) : ""}</span></div>
-        ${gh.open.length ? `<ul>${gh.open.slice(0, 5).map(p => `<li><span class="chip info">${p.draft ? "draft" : "PR"}</span><a class="t" href="${esc(p.html_url || "")}" target="_blank" rel="noopener">#${esc(p.number)} ${esc(p.title)}</a><span class="age">${ago(p.created_at, now)}</span></li>`).join("")}</ul>` : ""}
-        ${gh.stray.length ? `<ul>${gh.stray.slice(0, 5).map(b => `<li><span class="chip warn">${esc(b.why)}</span><span class="t mono">${esc(b.name)}</span></li>`).join("")}${gh.stray.length > 5 ? `<li class="age">and ${gh.stray.length - 5} more</li>` : ""}</ul>` : ""}
-      </div>`;
-      else ghHtml = `<div class="block"><div class="k"><span>GitHub</span><span>clean</span></div></div>`;
+      else if (gh.err) ghHtml = `<div class="block"><div class="k"><span>GitHub</span><span>${esc(gh.err.code)}</span></div><div class="mono">${esc(own(FIX, gh.err.code) ? FIX[gh.err.code] : "Could not read this repo right now.")}${gh.partial ? " Showing the half that loaded." : ""}</div>${gh.partial ? ghLists(gh, now) : ""}</div>`;
+      else if (!gh.complete) ghHtml = `<div class="block"><div class="k"><span>GitHub</span><span>partial</span></div>${ghLists(gh, now)}</div>`;
+      else if (gh.open.length || gh.stray.length) ghHtml = `<div class="block"><div class="k"><span>GitHub</span><span>${gh.at ? ago(gh.at, now) : ""}</span></div>${ghLists(gh, now)}</div>`;
+      else ghHtml = `<div class="block"><div class="k"><span>GitHub</span><span>no open PRs, no stray branches</span></div></div>`;
+    } else if (r && !state.ghErr && state.mcp) {
+      ghHtml = `<div class="block"><div class="k"><span>GitHub</span><span>not checked</span></div><div class="mono">Outside the ${GH_MAX_REPOS} most relevant repos pushed in the last ${GH_WINDOW_DAYS} days.</div></div>`;
     }
-    const noteHtml = note && note.note ? `<div class="block"><div class="k"><span>Your note</span><span>${ago(note.updated_at, now)}</span></div><div class="note">${esc(note.note)}</div></div>` : "";
+    const noteHtml = note && txt(note.note) ? `<div class="block"><div class="k"><span>Your note</span><span>${ago(note.updated_at, now)}</span></div><div class="note">${esc(txt(note.note))}</div></div>` : "";
     const edit = state.canWrite !== false && state.db ? `<div class="repo"><button class="btn small" type="button" data-edit="${esc(g.k)}">${note ? "Edit notes" : "Add notes"}</button></div>` : "";
 
     return `<article class="lane">${head}
-      ${r ? `<div class="repo"><a href="${esc(r.url)}" target="_blank" rel="noopener">${esc(r.full_name)}</a><span>pushed ${ago(r.pushed_at, now)}</span>${r.visibility === "public" ? `<span>public</span>` : ""}</div>` : `<div class="repo"><span>no matching repo</span></div>`}
+      ${r ? `<div class="repo">${safeUrl(r.url) ? `<a href="${esc(safeUrl(r.url))}" target="_blank" rel="noopener">${esc(r.full_name)}</a>` : esc(r.full_name)}<span>pushed ${ago(r.pushed_at, now)}</span>${r.visibility === "public" ? `<span>public</span>` : ""}</div>` : `<div class="repo"><span>no matching repo</span></div>`}
       ${flags.length ? `<div class="flags">${flags.join("")}</div>` : ""}
       ${latestHtml}${others}${repHtml}${ghHtml}${noteHtml}${edit}
     </article>`;
@@ -574,18 +620,20 @@
   }
 
   // ---------- data: Claude Code Remote ----------
+  const GLOBAL_GH = ["needs_reauth", "server_not_connected", "not_in_manifest", "not_granted", "capability_disabled", "selection_required", "consent_required"];
   const AUTHZ = ["needs_reauth", "server_not_connected", "blocked_by_policy", "approval_required", "not_in_manifest", "not_granted", "capability_disabled", "consent_required", "selection_required"];
   function onEvent(key, apply) {
     return ev => {
       if (ev.type === "error") {
         const e = ev.error || {};
-        if (AUTHZ.includes(e.code)) { state.loaded[key] = false; if (key === "sessions") state.sessions = []; }
         state.err[key] = e; render(); return;
       }
       state.err[key] = null;
       const body = unwrap(ev.result && ev.result.payload);
       const storedAt = ev.result && ev.result.cache && ev.result.cache.storedAt;
+      const seq = ++applySeq;
       Promise.resolve(apply(body)).then(() => {
+        if (key === "sessions" && seq < lastSessionsSeq) return; if (key === "sessions") lastSessionsSeq = seq;
         state.at[key] = storedAt || Date.now();
         state.loaded[key] = true; render(); ensureGithub();
       }).catch(e => { state.err[key] = { code: (e && e.code) || "upstream_error", message: e && e.message }; render(); });
@@ -594,19 +642,24 @@
   async function morePages(first) {
     let all = arr(first.data).slice();
     let more = !!first.has_more, last = first.last_id, pages = 1;
+    state.truncated = false;
     while (more && last && pages < 4) {
-      const r = await state.mcp.callTool(CCR, "list_sessions", { limit: 100, after_id: last }, { cache: { staleTime: 60000, gcTime: 600000 } });
-      const b = unwrap(r.payload);
-      all = all.concat(arr(b.data));
-      more = !!b.has_more; last = b.last_id; pages++;
+      try {
+        const r = await state.mcp.callTool(CCR, "list_sessions", { limit: 100, after_id: last }, { cache: { staleTime: 60000, gcTime: 600000 } });
+        const b = unwrap(r.payload);
+        all = all.concat(arr(b.data));
+        more = !!b.has_more; last = b.last_id; pages++;
+      } catch (e) { state.truncated = true; break; }
     }
+    if (more) state.truncated = true;
     const seen = new Set();
     return all.filter(s => s && s.id && !seen.has(s.id) && seen.add(s.id));
   }
+  let applySeq = 0, lastSessionsSeq = 0;
   const APPLY = {
-    sessions: async b => { state.sessions = await morePages(b); },
+    sessions: async b => { state.sessions = (await morePages(b)).filter(s => s && typeof s === "object"); },
     repos: b => { state.repos = arr(b.repos); },
-    triggers: b => { state.triggers = arr(b.data); },
+    triggers: b => { state.triggers = arr(b.data).filter(t => t && typeof t === "object"); },
   };
   const subs = {};
   function subscribe() {
@@ -632,27 +685,31 @@
   // ---------- data: GitHub, per matched repo ----------
   function ensureGithub() {
     if (!state.mcp || state.ghErr || !state.loaded.sessions || !state.loaded.repos) return;
-    const keys = new Set(state.sessions.map(projectKey).concat(Object.keys(state.reports)));
     const now = Date.now();
-    const candidates = [...keys].map(repoFor).filter(Boolean)
-      .filter(r => now - (Date.parse(r.pushed_at) || 0) < GH_WINDOW_DAYS * 864e5)
-      .sort((a, b) => (Date.parse(b.pushed_at) || 0) - (Date.parse(a.pushed_at) || 0))
-      .slice(0, GH_MAX_REPOS);
+    const score = new Map();
+    for (const s of state.sessions) { if (bucket(s) === "archived") continue; const k = projectKey(s); score.set(k, (score.get(k) || 0) + (severity(s, now) === "critical" ? 10 : severity(s, now) ? 5 : 1)); }
+    for (const k of Object.keys(state.reports)) score.set(k, (score.get(k) || 0) + 3 + 10 * strs(state.reports[k].waiting_on_simon).length);
+    const candidates = [...score.keys()].map(k => [repoFor(k), score.get(k)]).filter(x => x[0])
+      .filter(([r]) => now - (Date.parse(r.pushed_at) || 0) < GH_WINDOW_DAYS * 864e5)
+      .sort((a, b) => (b[1] - a[1]) || ((Date.parse(b[0].pushed_at) || 0) - (Date.parse(a[0].pushed_at) || 0)))
+      .slice(0, GH_MAX_REPOS).map(x => x[0]);
+    const keep = new Set(candidates.map(r => repoName(r).toLowerCase()));
+    for (const k of Object.keys(state.ghSubs)) if (!keep.has(k)) { try { state.ghSubs[k].forEach(u => u()); } catch (e) {} delete state.ghSubs[k]; delete state.gh[k]; }
     for (const r of candidates) {
       const key = repoName(r).toLowerCase();
       if (state.ghSubs[key]) continue;
       const [owner, repo] = String(r.full_name).split("/");
       if (!owner || !repo) continue;
-      state.gh[key] = { prs: null, branches: null, loading: true, err: null, at: null };
+      state.gh[key] = { prs: null, branches: null, loading: true, errs: nullObj(), at: null };
       const opts = { cache: { staleTime: 300000, gcTime: 3600000 }, refetchInterval: 600000 };
       const handler = field => ev => {
         const g = state.gh[key]; if (!g) return;
         if (ev.type === "error") {
           const e = ev.error || {};
-          if (AUTHZ.includes(e.code)) { state.ghErr = e; stopGithub(); render(); return; }
-          g.err = e; g.loading = false; render(); return;
+          if (GLOBAL_GH.includes(e.code)) { state.ghErr = e; stopGithub(); render(); return; }
+          g.errs[field] = e; g.loading = false; render(); return;
         }
-        g.err = null;
+        delete g.errs[field];
         const body = unwrap(ev.result && ev.result.payload);
         g[field] = Array.isArray(body) ? body : arr(body.data || body.items);
         g.at = (ev.result && ev.result.cache && ev.result.cache.storedAt) || Date.now();
@@ -660,14 +717,14 @@
         render();
       };
       state.ghSubs[key] = [
-        state.mcp.watchTool(GH, "list_pull_requests", { owner, repo, state: "all", perPage: 30 }, handler("prs"), opts),
+        state.mcp.watchTool(GH, "list_pull_requests", { owner, repo, state: "all", perPage: 100 }, handler("prs"), opts),
         state.mcp.watchTool(GH, "list_branches", { owner, repo, perPage: 100 }, handler("branches"), opts),
       ];
     }
   }
   function stopGithub() {
     for (const k of Object.keys(state.ghSubs)) { try { state.ghSubs[k].forEach(u => u()); } catch (e) {} }
-    state.ghSubs = {}; state.gh = {};
+    state.ghSubs = nullObj(); state.gh = nullObj();
   }
 
   // ---------- data: the page's store (reports, notes) ----------
@@ -676,12 +733,12 @@
     let slow = setTimeout(() => { state.storeSlow = true; render(); }, 10000);
     const clear = () => { if (slow) { clearTimeout(slow); slow = null; state.storeSlow = false; } };
     db.collection("projects").onSnapshot(snap => {
-      const next = {}; snap.docs.forEach(d => { if (d.exists) next[d.id] = d.data(); });
-      state.reports = next; state.loaded.reports = true; if (!snap.metadata.fromCache) clear(); render(); ensureGithub();
+      const next = nullObj(); snap.docs.forEach(d => { const b = d.exists && d.data(); if (b && typeof b === "object") next[d.id] = b; });
+      state.reports = next; state.loaded.reports = true; state.err.store = null; if (!snap.metadata.fromCache) clear(); render(); ensureGithub();
     }, e => { state.err.store = e; clear(); render(); });
     db.collection("notes").onSnapshot(snap => {
-      const next = {}; snap.docs.forEach(d => { if (d.exists) next[d.id] = d.data(); });
-      state.notes = next; state.loaded.notes = true; if (!snap.metadata.fromCache) clear(); render();
+      const next = nullObj(); snap.docs.forEach(d => { const b = d.exists && d.data(); if (b && typeof b === "object") next[d.id] = b; });
+      state.notes = next; state.loaded.notes = true; state.err.store = null; if (!snap.metadata.fromCache) clear(); render();
     }, e => { state.err.store = e; clear(); render(); });
   }
 
@@ -700,6 +757,10 @@
     $("#ed-note").focus();
   }
   function closeEditor() { $("#editor").hidden = true; ed.key = null; }
+  function editorDirty() {
+    if (!ed.key) return false; const n = state.notes[dbKey(ed.key)] || {};
+    return $("#ed-note").value.trim() !== (txt(n.note) || "").trim() || $("#ed-target").value !== (txt(n.target) || "") || $("#ed-parked").checked !== (n.parked === true) || Number($("#ed-priority").value) !== (Number(n.priority) || 0);
+  }
   let saving = false;
   async function saveEditor() {
     if (!ed.key || !state.db || saving) return;
@@ -733,18 +794,19 @@
   $("#refresh").addEventListener("click", refreshAll);
   $("#page-notice").addEventListener("click", e => { const b = e.target.closest("[data-retry]"); if (b) retry(b.dataset.retry); });
   $("#lanes").addEventListener("click", e => { const b = e.target.closest("[data-edit]"); if (b) openEditor(b.dataset.edit); });
+  $("#gh-status").addEventListener("click", e => { if (e.target.closest("#gh-retry")) { state.ghErr = null; ensureGithub(); render(); } });
   $("#ed-cancel").addEventListener("click", closeEditor);
   $("#ed-save").addEventListener("click", saveEditor);
-  document.addEventListener("keydown", e => { if (e.key === "Escape" && !$("#editor").hidden) closeEditor(); });
+  document.addEventListener("keydown", e => { if (e.key === "Escape" && !$("#editor").hidden) { if (editorDirty()) $("#ed-status").textContent = "Unsaved changes. Save, or press Cancel to discard."; else closeEditor(); } });
 
-  render();
+  renderNow();
   (async () => {
     const use = async name => { try { return window.claude && typeof window.claude.use === "function" ? await window.claude.use(name) : null; } catch (e) { return null; } };
     const [mcp, db, user] = await Promise.all([use("mcp"), use("db"), use("user")]);
     state.db = db; state.user = user;
     if (user) { try { state.canWrite = await user.can("data.write"); } catch (e) { state.canWrite = null; } }
     if (db) subscribeStore(); else { state.err.store = { code: "not_granted" }; }
-    if (!mcp) { state.err.sessions = { code: "not_granted" }; render(); $("#freshness").textContent = "Not connected"; return; }
+    if (!mcp) { state.err.sessions = { code: "not_granted" }; render(); setText("#freshness", "Not connected"); return; }
     state.mcp = mcp;
     subscribe();
   })();
